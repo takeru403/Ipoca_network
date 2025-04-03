@@ -1,3 +1,26 @@
 .env
 /data
 
+# Python関連
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+
+# VSCode / devcontainer
+.vscode/
+.devcontainer/
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+
+# システムファイル
+.DS_Store
+
