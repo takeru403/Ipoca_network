@@ -1,0 +1,37 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ✅ リポジトリをクローン
+        uses: actions/checkout@v3
+
+      - name: 🔐 EC2秘密鍵を設定
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+      - name: 🚀 EC2 にファイル転送（scp）
+        run: |
+          scp -o StrictHostKeyChecking=no -r .devcontainer ec2-user@54.168.159.57:/home/ec2-user/Ipoca_network/
+          scp -o StrictHostKeyChecking=no -r app ec2-user@54.168.159.57:/home/ec2-user/Ipoca_network/
+          scp -o StrictHostKeyChecking=no requirements.txt ec2-user@54.168.159.57:/home/ec2-user/Ipoca_network/
+
+      - name: 🛠️ EC2 内で Docker build & run（任意）
+        run: |
+          ssh -o StrictHostKeyChecking=no ec2-user@54.168.159.57 << 'EOF'
+            cd ~/Ipoca_network/.devcontainer
+            docker build -t flask-dev .
+            docker stop flask-dev || true
+            docker rm flask-dev || true
+            docker run -d -p 8888:8888 -v ~/Ipoca_network:/workspace --name flask-dev flask-dev
+          EOF
+
