@@ -19,6 +19,14 @@ jobs:
           echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
+      - name: 🧹 EC2上の古いファイル削除
+        run: |
+          ssh -o StrictHostKeyChecking=no ec2-user@54.168.159.57 << 'EOF'
+            rm -rf /home/ec2-user/Ipoca_network/.devcontainer
+            rm -rf /home/ec2-user/Ipoca_network/app
+            rm -f  /home/ec2-user/Ipoca_network/requirements.txt
+          EOF
+
       - name: 🚀 EC2 にファイル転送（scp）
         run: |
           scp -o StrictHostKeyChecking=no -r .devcontainer ec2-user@54.168.159.57:/home/ec2-user/Ipoca_network/
