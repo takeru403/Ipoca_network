@@ -6,7 +6,13 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.env
+.venv/
+venv/
+
+# Node.js / React 関連
+frontend/node_modules/
+frontend/build/
+frontend/.env
 
 # VSCode / devcontainer
 .vscode/
@@ -24,3 +30,5 @@ terraform/terraform.tfstate.backup
 # システムファイル
 .DS_Store
 
+# ログ
+*.log
