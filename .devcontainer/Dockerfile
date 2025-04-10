@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
   vim \
   ca-certificates \
   gnupg \
+  tree \
   && apt-get clean
 
 # Node.js 18.x のインストール（React用）

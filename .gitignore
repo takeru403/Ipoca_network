@@ -31,3 +31,6 @@ terraform/terraform.tfstate.backup
 
 # ログ
 *.log
+
+# React build
+frontend/build/

@@ -19,6 +19,12 @@ jobs:
           echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
+      - name: 📦 React をビルド
+        run: |
+          cd frontend
+          npm install
+          npm run build
+
       - name: 🧹 EC2上の古いファイル削除
         run: |
           ssh -o StrictHostKeyChecking=no ec2-user@54.168.159.57 << 'EOF'
@@ -42,4 +48,3 @@ jobs:
             docker rm flask-dev || true
             docker run -d -p 8888:8888 -v ~/Ipoca_network:/workspace --name flask-dev flask-dev
           EOF
-
