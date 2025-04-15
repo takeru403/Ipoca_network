@@ -1,0 +1,19 @@
+{
+  "name": "Flask + Jupyter DevContainer",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "dev",
+  "workspaceFolder": "/workspace",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-toolsai.jupyter"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "jupyter.jupyterServerType": "local"
+      }
+    }
+  },
+  "remoteUser": "root"
+}

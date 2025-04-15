@@ -1,0 +1,35 @@
+.env
+/data
+
+# Python関連
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# Node.js / React 関連
+frontend/node_modules/
+frontend/build/
+frontend/.env
+
+# VSCode / devcontainer
+.vscode/
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+
+# システムファイル
+.DS_Store
+
+# ログ
+*.log
+app/token.json
+token.json

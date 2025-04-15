@@ -1,0 +1,52 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ✅ リポジトリをクローン
+        uses: actions/checkout@v3
+
+      - name: 🔧 Reactアプリのビルド
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+        env:
+          CI: false
+
+      - name: 🔐 EC2秘密鍵を設定
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+      - name: 🧹 EC2上の古いファイル削除
+        run: |
+          ssh -o StrictHostKeyChecking=no ec2-user@54.168.159.57 << 'EOF'
+            rm -rf ~/Ipoca_network/app/static
+            rm -rf ~/Ipoca_network/app/app.py
+            rm -f  ~/Ipoca_network/requirements.txt
+          EOF
+
+      - name: 🚀 EC2 にファイル転送
+        run: |
+          scp -o StrictHostKeyChecking=no -r app ec2-user@54.168.159.57:/home/ec2-user/Ipoca_network/
+          scp -o StrictHostKeyChecking=no requirements.txt ec2-user@54.168.159.57:/home/ec2-user/Ipoca_network/
+          scp -o StrictHostKeyChecking=no -r frontend/build ec2-user@54.168.159.57:/home/ec2-user/Ipoca_network/app/static
+
+      - name: 🛠️ EC2上で Flask 再起動
+        run: |
+          ssh -o StrictHostKeyChecking=no ec2-user@54.168.159.57 << 'EOF'
+            pkill -f gunicorn || true
+            cd ~/Ipoca_network
+            pip3 install -r requirements.txt
+            gunicorn -b 0.0.0.0:80 app.app:app --daemon
+          EOF
+
