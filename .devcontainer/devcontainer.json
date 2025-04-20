@@ -15,5 +15,8 @@
       }
     }
   },
-  "remoteUser": "root"
+  "remoteUser": "root",
+  //"updateContentCommand": "",         // ← auto COPY/RUN を無効化
+  //"postCreateCommand": "pip install -r requirements.txt"
+
 }
