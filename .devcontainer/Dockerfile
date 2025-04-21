@@ -38,7 +38,4 @@ WORKDIR /workspace
 COPY . /workspace
 
 EXPOSE 8000
-CMD ["python", "backend/app.py", "--host", "0.0.0.0", "--port", "8000"]
-
-# ── Jupyter Lab ─────────────────
-CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--no-browser","--NotebookApp.token=", "--NotebookApp.password="]
+CMD ["python", "app/app.py", "--host", "0.0.0.0", "--port", "8000"]
