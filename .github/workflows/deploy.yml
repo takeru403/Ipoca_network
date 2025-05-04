@@ -34,22 +34,29 @@ jobs:
             -o StrictHostKeyChecking=no \
             ec2-user@54.168.159.57 << 'EOF'
           rm -rf ~/Ipoca_network/app/static
-          rm -f  ~/Ipoca_network/app/app.py
           rm -f  ~/Ipoca_network/requirements.txt
+          rm -f  ~/Ipoca_network/app/templates/index.html
         EOF
       shell: bash
 
     - name: 🚀 EC2 にファイル転送
       run: |
+        # Pythonソースとrequirements
         scp -i ~/.ssh/my-new-key.pem \
             -o StrictHostKeyChecking=no \
             -r app ec2-user@54.168.159.57:/home/ec2-user/Ipoca_network/
         scp -i ~/.ssh/my-new-key.pem \
             -o StrictHostKeyChecking=no \
             requirements.txt ec2-user@54.168.159.57:/home/ec2-user/Ipoca_network/
+
+        # Reactビルド成果物
         scp -i ~/.ssh/my-new-key.pem \
             -o StrictHostKeyChecking=no \
-            -r frontend/build ec2-user@54.168.159.57:/home/ec2-user/Ipoca_network/app/static
+            -r frontend/build/static ec2-user@54.168.159.57:/home/ec2-user/Ipoca_network/app/
+
+        scp -i ~/.ssh/my-new-key.pem \
+            -o StrictHostKeyChecking=no \
+            frontend/build/index.html ec2-user@54.168.159.57:/home/ec2-user/Ipoca_network/app/templates/
       shell: bash
 
     - name: 🛠️ EC2上で Flask 再起動
@@ -60,7 +67,7 @@ jobs:
           pkill -f gunicorn || true
           cd ~/Ipoca_network
           pip3 install -r requirements.txt
-          gunicorn -b 0.0.0.0:80 app.app:app --daemon
+          gunicorn -b 0.0.0.0:8000 'app:create_app()' --daemon
         EOF
       shell: bash
 
