@@ -47,8 +47,9 @@ def create_network_plot(file):
         jp_font_path = "/usr/share/fonts/truetype/ipaexfont-gothic/ipaexg.ttf"
         jp_font = fm.FontProperties(fname=jp_font_path)
         nx.draw_networkx_labels(G, pos, font_size=10, font_properties=jp_font)
-    except:
-        nx.draw_networkx_labels(G, pos, font_size=10, font_family="IPAexGothic")
+    except Exception as e:
+        print(f"フォント読み込み失敗: {e}")
+        nx.draw_networkx_labels(G, pos, font_size=10)  # フォント指定なしで描画
 
     plt.title("リフト値ネットワーク（ノードサイズ:媒介中心性, 色:コミュニティ）")
     plt.axis("off")
