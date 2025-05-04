@@ -3,6 +3,8 @@ import networkx as nx
 import pandas as pd
 import matplotlib.font_manager as fm
 from networkx.algorithms import community
+import matplotlib
+matplotlib.use("Agg")  # 非GUI環境での描画用
 
 def create_network_plot(file):
     # データ読み込み
