@@ -12,14 +12,6 @@ jobs:
     - name: ✅ リポジトリをクローン
       uses: actions/checkout@v3
 
-    - name: 🔧 Reactアプリのビルド
-      run: |
-        cd frontend
-        npm ci
-        npm run build
-      env:
-        CI: false
-
     - name: 🔐 EC2秘密鍵を設定
       run: |
         mkdir -p ~/.ssh
@@ -33,39 +25,44 @@ jobs:
         ssh -i ~/.ssh/my-new-key.pem \
             -o StrictHostKeyChecking=no \
             ec2-user@54.168.159.57 << 'EOF'
+          rm -rf ~/Ipoca_network/frontend
           rm -rf ~/Ipoca_network/app/static
           rm -f  ~/Ipoca_network/requirements.txt
           rm -f  ~/Ipoca_network/app/templates/index.html
         EOF
       shell: bash
 
-    - name: 🚀 EC2 にファイル転送
+    - name: 🚀 EC2 にファイル転送（フロントエンドsrcごと）
       run: |
-        # Pythonソースとrequirements
+        scp -i ~/.ssh/my-new-key.pem \
+            -o StrictHostKeyChecking=no \
+            -r frontend ec2-user@54.168.159.57:/home/ec2-user/Ipoca_network/
         scp -i ~/.ssh/my-new-key.pem \
             -o StrictHostKeyChecking=no \
             -r app ec2-user@54.168.159.57:/home/ec2-user/Ipoca_network/
         scp -i ~/.ssh/my-new-key.pem \
             -o StrictHostKeyChecking=no \
             requirements.txt ec2-user@54.168.159.57:/home/ec2-user/Ipoca_network/
-
-        # Reactビルド成果物
-        scp -i ~/.ssh/my-new-key.pem \
-            -o StrictHostKeyChecking=no \
-            -r frontend/build/static ec2-user@54.168.159.57:/home/ec2-user/Ipoca_network/app/
-
-        scp -i ~/.ssh/my-new-key.pem \
-            -o StrictHostKeyChecking=no \
-            frontend/build/index.html ec2-user@54.168.159.57:/home/ec2-user/Ipoca_network/app/templates/
       shell: bash
 
-    - name: 🛠️ EC2上で Flask 再起動
+    - name: 🛠️ EC2上で React ビルド & Flask 再起動
       run: |
         ssh -i ~/.ssh/my-new-key.pem \
             -o StrictHostKeyChecking=no \
             ec2-user@54.168.159.57 << 'EOF'
-          pkill -f gunicorn || true
+          # Reactビルド
+          cd ~/Ipoca_network/frontend
+          npm install
+          npm run build
+
+          # FlaskにReact成果物を配置
+          cp -r build/static ../app/static
+          mkdir -p ../app/templates
+          cp build/index.html ../app/templates/index.html
+
+          # Flask再起動
           cd ~/Ipoca_network
+          pkill -f gunicorn || true
           pip3 install -r requirements.txt
           gunicorn -b 0.0.0.0:8000 'app:create_app()' --daemon
         EOF
