@@ -3,6 +3,7 @@ import "./App.css";
 import LoginForm from "./components/LoginForm";
 import RadarChartBox from "./components/RadarChartBox";
 import SlideSearch from "./components/SlideSearch";
+import DrawNetwork from "./components/DrawNetwork";  // ← ★追加
 import { fetchJSON } from "./api";
 
 function App() {
@@ -31,7 +32,14 @@ function App() {
       </header>
 
       {toast && <div className="toast">{toast}</div>}
+
+      {/* ネットワーク描画セクション */}
+      <DrawNetwork />
+
+      {/* レーダーチャート */}
       <RadarChartBox setToast={setToast} logout={logout} />
+
+      {/* スライド検索 */}
       <SlideSearch setToast={setToast} logout={logout} />
     </div>
   );

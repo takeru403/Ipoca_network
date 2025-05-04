@@ -1,5 +1,7 @@
 console.log("tmp.jsが実行されました。")
 
-const add = (a, b) => {
-  return a + b
+const greet = (name) => {
+  return `${name}さんこんにちは`;
 }
+
+console.log(greet("太郎"));
