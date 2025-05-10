@@ -1,10 +1,11 @@
+# backend/search/route.py
 from flask import Blueprint, request, jsonify
 from app.decorators import login_required
 from .service import perform_search
 
 search_bp = Blueprint("search", __name__, url_prefix="/api")
 
-@search_bp.post("/search")
+@search_bp.post("/search-slides")
 @login_required
 def search():
     query = request.get_json().get("query", "").strip()

@@ -1,6 +1,7 @@
 // src/components/SlideSearch.js
 import React, { useState } from "react";
 import { fetchJSON } from "../api";
+import "../App.css";
 
 const presentationId = "1xW8Lze5bfwUzNd9ZqputgTFyQJdoKK3f3I7esGACAds";
 
@@ -19,6 +20,7 @@ export default function SlideSearch({ setToast, logout }) {
       const data = await fetchJSON("/api/search", {
         method: "POST",
         body: JSON.stringify({ query }),
+        credentials: "include",
       });
       setResults(data);
     } catch (e) {
@@ -30,45 +32,37 @@ export default function SlideSearch({ setToast, logout }) {
   };
 
   return (
-    <section style={{ marginTop: "3rem" }}>
-      <h2>🔍 スライド検索</h2>
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="例: 売上を上げる施策"
-        style={{ width: "60%", padding: "0.5rem", marginRight: "0.7rem" }}
-      />
-      <button onClick={handleSearch} style={{ padding: "0.55rem 1.2rem" }}>
-        検索
-      </button>
-      {loading && <p>⏳ 読み込み中…</p>}
+    <section className="slide-search-container">
+      <h2 className="section-title">3. スライド検索</h2>
+
+      <div className="search-box">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="例: 売上を上げる施策"
+          className="text-input"
+        />
+        <button onClick={handleSearch} className="primary-button">
+          検索
+        </button>
+      </div>
+
+      {loading && <p className="status-message">⏳ 読み込み中…</p>}
 
       {results.length > 0 && (
-        <div style={{ marginTop: "1.5rem" }}>
+        <div className="search-results">
           <h3>📄 類似スライド一覧</h3>
           {results.map((s, idx) => (
-            <div
-              key={idx}
-              style={{
-                border: "1px solid #ddd",
-                borderRadius: 8,
-                padding: "1rem",
-                marginBottom: "1rem",
-                boxShadow: "0 2px 6px rgba(0,0,0,0.07)",
-                background: "#fff",
-              }}
-            >
-              <strong>
-                スライド {s.slide_index}（スコア: {s.score.toFixed(3)}）
-              </strong>
+            <div key={idx} className="result-card">
+              <strong>スライド {s.slide_index}（スコア: {s.score.toFixed(3)}）</strong>
               <p style={{ whiteSpace: "pre-wrap" }}>{s.content}</p>
             </div>
           ))}
         </div>
       )}
 
-      <h2 style={{ marginTop: "3rem" }}>📽 Googleスライド全体表示</h2>
+      <h2 className="section-title">📽 Googleスライド全体表示</h2>
       <iframe
         src={`https://docs.google.com/presentation/d/${presentationId}/embed?start=false&loop=false`}
         width="960"
@@ -76,7 +70,7 @@ export default function SlideSearch({ setToast, logout }) {
         frameBorder="0"
         allowFullScreen
         title="Embedded Google Slides"
-        style={{ borderRadius: 8, marginTop: "0.8rem" }}
+        className="slide-iframe"
       ></iframe>
     </section>
   );

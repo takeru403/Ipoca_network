@@ -1,5 +1,6 @@
 // frontend/src/components/DrawNetwork.js
 import React, { useState } from "react";
+import "../App.css";
 
 export default function DrawNetwork() {
   const [file, setFile] = useState(null);
@@ -30,20 +31,27 @@ export default function DrawNetwork() {
   };
 
   return (
-    <div style={{ marginTop: "2rem" }}>
-      <h2>📡 ネットワーク描画</h2>
-      <input
-        type="file"
-        accept=".csv,.xlsx"
-        onChange={(e) => setFile(e.target.files[0])}
-      />
-      <button onClick={handleUpload} disabled={!file || loading} style={{ marginLeft: "1rem" }}>
-        描画
-      </button>
-      {error && <p style={{ color: "red" }}>{error}</p>}
+    <div className="network-container">
+      <h2 className="section-title">1. 併売ネットワーク描画</h2>
+      <div className="upload-area">
+        <input
+          type="file"
+          accept=".csv,.xlsx"
+          onChange={(e) => setFile(e.target.files[0])}
+          className="file-input"
+        />
+        <button
+          onClick={handleUpload}
+          disabled={!file || loading}
+          className="primary-button"
+        >
+          {loading ? "描画中..." : "描画"}
+        </button>
+      </div>
+      {error && <p className="error-message">{error}</p>}
       {imgSrc && (
-        <div style={{ marginTop: "1.5rem" }}>
-          <img src={imgSrc} alt="Network Graph" style={{ maxWidth: "100%" }} />
+        <div className="network-image-wrapper">
+          <img src={imgSrc} alt="Network Graph" className="network-image" />
         </div>
       )}
     </div>

@@ -17,10 +17,12 @@ def create_app():
   # Blueprint 登録
   # 各機能を分割したモジュールをインポートして、flaskアプリに登録する。
   from .auth.routes import auth_bp
-  from .search.routes import search_bp
+ # from .search.routes import search_bp
   from .upload.routes import upload_bp
   from .frontend import register_frontend
   from .network.routes import network_bp
+  #from .search.service import search_bp
+  from .search.routes import search_bp
   app.register_blueprint(auth_bp)
   app.register_blueprint(network_bp)
   app.register_blueprint(search_bp)

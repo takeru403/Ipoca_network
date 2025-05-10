@@ -23,11 +23,24 @@ export default function LoginForm({ onLogin }) {
 
   return (
     <div className="login-container">
-      <h2>ログイン</h2>
-      <input value={user} onChange={(e) => setUser(e.target.value)} placeholder="ユーザー名" />
-      <input value={pwd} type="password" onChange={(e) => setPwd(e.target.value)} placeholder="パスワード" />
-      <button onClick={login}>ログイン</button>
-      {authErr && <p className="error">{authErr}</p>}
+      <h2 className="login-title">ログイン</h2>
+      <input
+        className="login-input"
+        value={user}
+        onChange={(e) => setUser(e.target.value)}
+        placeholder="ユーザー名"
+      />
+      <input
+        className="login-input"
+        type="password"
+        value={pwd}
+        onChange={(e) => setPwd(e.target.value)}
+        placeholder="パスワード"
+      />
+      <button className="login-button" onClick={login}>
+        ログイン
+      </button>
+      {authErr && <p className="error-message">{authErr}</p>}
     </div>
   );
 }
