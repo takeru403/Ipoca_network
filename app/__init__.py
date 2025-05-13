@@ -10,8 +10,11 @@ def create_app():
     template_folder = "../frontend/build"
   )
   app.secret_key = Config.SECRET_KEY
-  app.config.update(Config.SESSION_CONFIG)
-  #
+  #app.config.update(Config.SESSION_CONFIG)
+  app.config.update({
+      "SESSION_COOKIE_SAMESITE": "None",  # クロスオリジンCookie許可
+      "SESSION_COOKIE_SECURE": False      # HTTPで開発するならFalse、本番HTTPSならTrue
+  })
   CORS(app, supports_credentials=True, origins=["http://54.168.159.57"])
 
   # Blueprint 登録
