@@ -142,7 +142,7 @@ export default function RadarChartBox({ setToast, logout }) {
       {radarData.length > 0 && (
         <div className="radar-chart-wrapper">
           <RadarChart
-            cx={260}
+            cx={400}
             cy={210}
             outerRadius={130}
             width={520}

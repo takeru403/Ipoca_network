@@ -33,3 +33,7 @@ terraform/terraform.tfstate.backup
 *.log
 app/token.json
 token.json
+
+# パワーポイント
+*.pptx
+*.pdf
