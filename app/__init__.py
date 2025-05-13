@@ -12,7 +12,7 @@ def create_app():
   app.secret_key = Config.SECRET_KEY
   app.config.update(Config.SESSION_CONFIG)
   #
-  CORS(app, supports_credentials=True)
+  CORS(app, supports_credentials=True, origins=["http://54.168.159.57"])
 
   # Blueprint 登録
   # 各機能を分割したモジュールをインポートして、flaskアプリに登録する。

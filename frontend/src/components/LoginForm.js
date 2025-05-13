@@ -14,6 +14,7 @@ export default function LoginForm({ onLogin }) {
       await fetchJSON("/api/login", {
         method: "POST",
         body: JSON.stringify({ username: user, password: pwd }),
+        credentials: "include",
       });
       onLogin();
     } catch (e) {
