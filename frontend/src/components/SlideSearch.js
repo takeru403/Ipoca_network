@@ -17,7 +17,7 @@ export default function SlideSearch({ setToast, logout }) {
     }
     setLoading(true);
     try {
-      const data = await fetchJSON("/api/search", {
+      const data = await fetchJSON("/api/search-slides", {
         method: "POST",
         body: JSON.stringify({ query }),
         credentials: "include",
