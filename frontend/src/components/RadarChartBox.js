@@ -22,13 +22,13 @@ export default function RadarChartBox({ setToast, logout }) {
   const [loading, setLoading] = useState(false);
 
   const annotations = [
-    { label: "館内メディア", x: 200, y: 100 },
-    { label: "売場連携", x: 75, y: 80 },
-    { label: "レコメンド", x: 30, y: 170 },
-    { label: "付加価値", x: 80, y: 280 },
-    { label: "疑似体験コンテンツ", x: 200, y: 300 },
-    { label: "CRM", x: 330, y: 220 },
-    { label: "館外メディア", x: 340, y: 60 }
+    { label: "館内メディア", x: 200, y: 80 },
+    { label: "売場連携", x: 150, y: 120 },
+    { label: "レコメンド", x: 120, y: 200 },
+    { label: "付加価値", x: 180, y: 320 },
+    { label: "疑似体験コンテンツ", x: 300, y: 320 },
+    { label: "CRM", x: 380, y: 220 },
+    { label: "館外メディア", x: 300, y: 80 }
   ];
 
   const handleAnnotationClick = async (label) => {
@@ -142,11 +142,12 @@ export default function RadarChartBox({ setToast, logout }) {
       {radarData.length > 0 && (
         <div className="radar-chart-wrapper">
           <RadarChart
-            cx={400}
-            cy={210}
+            cx={250}
+            cy={200}
             outerRadius={130}
             width={520}
             height={420}
+            margin={{ top: 50, right: 50, left: 50, bottom: 50 }}
             data={radarData}
           >
             <PolarGrid />

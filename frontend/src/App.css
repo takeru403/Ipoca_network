@@ -234,6 +234,10 @@ body {
 .radar-chart-wrapper {
   margin-top: 2rem;
   text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
 }
 
 .section-title {
