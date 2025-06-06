@@ -444,3 +444,40 @@ body {
   border-radius: 4px;
   margin-bottom: 1.5rem;
 }
+
+
+.studio-panel {
+  background-color: #f8f9fc;
+  border-right: 1px solid #ccc;
+  padding: 20px;
+  width: 300px;
+  min-height: 100%;
+  position: absolute;
+  left: 0;
+  top: 60px;
+  bottom: 0;
+  z-index: 10;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-panel-button {
+  margin-left: 10px;
+  padding: 6px 10px;
+  background-color: #e1ecf4;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.main-content {
+  margin-left: 320px;
+  /* パネル分のマージン */
+  padding: 20px;
+}
+
+.toast {
+  background-color: #fffae6;
+  padding: 10px;
+  margin: 10px;
+  border-left: 4px solid #ffc107;
+}

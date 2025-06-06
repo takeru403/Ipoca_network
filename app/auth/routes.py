@@ -17,3 +17,11 @@ def login():
 def logout():
     session.clear()
     return jsonify({"message": "logged_out"})
+
+@auth_bp.route("/register", methods=["POST"])
+def register():
+    data = request.json
+    new_user = User(username=data["username"], password=data["password"])
+    db.session.commit()
+    return jsonify(message="ユーザー登録完了"), 201
+
