@@ -5,6 +5,7 @@ import RadarChartBox from "./components/RadarChartBox";
 import SlideSearch from "./components/SlideSearch";
 import DrawNetwork from "./components/DrawNetwork";
 import MindMap from "./components/MindMap";
+//import Cluster from "./components/Cluster";
 import { fetchJSON } from "./api";
 
 function App() {
@@ -66,6 +67,13 @@ function App() {
       )
       }
 
+      {showPanel && (
+        <aside className="fact-panel">
+          <h2>📊 ファクトパネル</h2>
+          <p>分析データのファクトに関して、音声ナレーションを行います。</p>
+        </aside>
+      )}
+
       <main className="main-content">
         {showMindMap ? (
           <div>
@@ -86,6 +94,9 @@ function App() {
           </div>
         ) : (
           <>
+            {/* クラスタリング */}
+            {/* //<Cluster /> */}
+
             {/* ネットワーク描画 */}
             < DrawNetwork />
 

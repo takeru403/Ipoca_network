@@ -38,3 +38,6 @@ token.json
 *.pptx
 *.pdf
 googleslide/
+
+# database
+app/app.db

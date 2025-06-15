@@ -1,7 +1,6 @@
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, request, jsonify
 from app.decorators import login_required
-from .draw_network import create_network_plot
-import io
+from .draw_network import create_network_json
 
 network_bp = Blueprint("network", __name__)
 
@@ -16,13 +15,7 @@ def network():
         return jsonify({"error": "filename_required"}), 400
 
     try:
-        fig = create_network_plot(f)
-
-        buf = io.BytesIO()
-        fig.savefig(buf, format="png", bbox_inches="tight")
-        buf.seek(0)
-
-        return send_file(buf, mimetype="image/png")
-
+        data = create_network_json(f)
+        return jsonify(data)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
