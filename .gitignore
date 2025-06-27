@@ -48,3 +48,5 @@ app/app.db
 # jupyter実行結果・一時生成ファイル
 *.ipynb_checkpoints/
 *.mp3
+
+*.db
