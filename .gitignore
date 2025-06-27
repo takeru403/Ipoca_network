@@ -33,6 +33,9 @@ terraform/terraform.tfstate.backup
 *.log
 app/token.json
 token.json
+app./credentials.json
+tmp/
+
 
 # パワーポイント
 *.pptx
@@ -41,3 +44,7 @@ googleslide/
 
 # database
 app/app.db
+
+# jupyter実行結果・一時生成ファイル
+*.ipynb_checkpoints/
+*.mp3

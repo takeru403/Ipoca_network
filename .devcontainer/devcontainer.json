@@ -1,8 +1,9 @@
 {
   "name": "Flask + Jupyter DevContainer",
-  "dockerComposeFile": "docker-compose.yml",
+  "dockerComposeFile": "./docker-compose.yml",
   "service": "dev",
   "workspaceFolder": "/workspace",
+
   "customizations": {
     "vscode": {
       "extensions": [
@@ -15,8 +16,15 @@
       }
     }
   },
-  "remoteUser": "root",
-  //"updateContentCommand": "",         // ← auto COPY/RUN を無効化
-  //"postCreateCommand": "pip install -r requirements.txt"
 
+  "remoteUser": "root",
+
+  "runArgs": [
+    "--memory=4g",
+    "--memory-swap=6g",
+    "--shm-size=1g"
+  ],
+
+  "postCreateCommand": "pip install -r requirements_core.txt"
 }
+

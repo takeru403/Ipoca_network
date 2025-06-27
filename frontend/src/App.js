@@ -5,7 +5,9 @@ import RadarChartBox from "./components/RadarChartBox";
 import SlideSearch from "./components/SlideSearch";
 import DrawNetwork from "./components/DrawNetwork";
 import MindMap from "./components/MindMap";
-//import Cluster from "./components/Cluster";
+import PosData from "./components/PosData";
+import Cluster from "./components/Cluster";
+import FactPannel from "./components/FactPannel";
 import { fetchJSON } from "./api";
 
 function App() {
@@ -71,6 +73,12 @@ function App() {
         <aside className="fact-panel">
           <h2>📊 ファクトパネル</h2>
           <p>分析データのファクトに関して、音声ナレーションを行います。</p>
+          <ul>
+            <li>
+              音声ナレーションの再生
+            </li>
+          </ul>
+
         </aside>
       )}
 
@@ -94,15 +102,16 @@ function App() {
           </div>
         ) : (
           <>
+            {/* POSデータ前処理 */}
+            <PosData />
+            {/* ファクトパネル（音声ナレーション） */}
+            <FactPannel />
             {/* クラスタリング */}
-            {/* //<Cluster /> */}
-
+            <Cluster />
             {/* ネットワーク描画 */}
-            < DrawNetwork />
-
+            <DrawNetwork />
             {/* レーダーチャート */}
-            < RadarChartBox setToast={setToast} logout={logout} />
-
+            <RadarChartBox setToast={setToast} logout={logout} />
             {/* スライド検索 */}
             <SlideSearch setToast={setToast} logout={logout} />
           </>

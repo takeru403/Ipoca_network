@@ -1,208 +1,191 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import ForceGraph2D from "react-force-graph-2d";
 
 const DrawNetwork = () => {
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
   const [loading, setLoading] = useState(false);
-  const [selectedMetric, setSelectedMetric] = useState("betweenness");
-  const [linkThreshold, setLinkThreshold] = useState(1);
-  const [nodeSize, setNodeSize] = useState(1);
+  const [error, setError] = useState(null);
+  const [centralityType, setCentralityType] = useState("betweenness");
+  const [nodeSize, setNodeSize] = useState(4);
+  const [linkWidth, setLinkWidth] = useState(1);
   const [showLabels, setShowLabels] = useState(true);
+  const [labelSize, setLabelSize] = useState(8);
 
-  // より自然な色パレットを定義
-  const communityColors = [
-    "#8dd3c7",  // ソフトミント
-    "#bebada",  // ラベンダー
-    "#fb8072",  // サーモンピンク
-    "#80b1d3",  // スカイブルー
-    "#fdb462",  // ピーチ
-    "#b3de69",  // ライムグリーン
-    "#fccde5",  // ライトピンク
-    "#d9d9d9",  // ライトグレー
-  ];
+  // コミュニティカラーの定義
+  const communityColors = useMemo(() => [
+    "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+    "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
+    "#ff9896", "#98df8a", "#c5b0d5", "#c49c94", "#f7b6d2"
+  ], []);
 
-  const networkMetrics = {
-    betweenness: "媒介中心性",
-    degree: "次数中心性",
-    closeness: "近接中心性",
-    eigenvector: "固有ベクトル中心性",
-  };
-
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
     if (!file) return;
-
-    const formData = new FormData();
-    formData.append("file", file);
-
     setLoading(true);
+    setError(null);
+    const formData = new FormData();
+    formData.append('file', file);
     try {
-      const response = await fetch("/api/network", {
-        method: "POST",
+      const response = await fetch('/api/network', {
+        method: 'POST',
         body: formData,
+        credentials: 'include'
       });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `エラーが発生しました: ${response.status}`);
+      }
       const data = await response.json();
-      setGraphData({
-        nodes: data.nodes || [],
-        links: data.links || []
-      });
-    } catch (err) {
-      console.error("ファイルのアップロードに失敗しました", err);
+      setGraphData(data);
+    } catch (error) {
+      setError(error.message || 'ネットワークの作成中にエラーが発生しました');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  const handleMetricChange = useCallback((metric) => {
-    setSelectedMetric(metric);
-  }, []);
+  // コミュニティ色＋中心性で透明度
+  const getNodeColor = useCallback((node) => {
+    const color = communityColors[node.group % communityColors.length];
+    const value = node[centralityType] || 0;
+    const alpha = 0.5 + value * 0.5;
+    return color + Math.round(alpha * 255).toString(16).padStart(2, '0');
+  }, [centralityType, communityColors]);
 
-  const getNodeValue = useCallback((node) => {
-    return (node[selectedMetric] || 0) * nodeSize;
-  }, [selectedMetric, nodeSize]);
+  // ノードサイズ
+  const getNodeSize = useCallback((node) => {
+    const value = node[centralityType] || 0;
+    return nodeSize * (1 + value * 3);
+  }, [centralityType, nodeSize]);
 
-  const getLinkValue = useCallback((link) => {
-    return (link.value || 0) >= linkThreshold ? Math.sqrt(link.value) : 0;
-  }, [linkThreshold]);
-
-  const styles = {
-    controlPanel: {
-      padding: "20px",
-      marginBottom: "20px",
-      backgroundColor: "#f5f5f5",
-      borderRadius: "8px",
-    },
-    controlGroup: {
-      marginBottom: "15px",
-    },
-    button: {
-      margin: "0 5px",
-      padding: "8px 15px",
-      backgroundColor: "#4a90e2",
-      color: "white",
-      border: "none",
-      borderRadius: "4px",
-      cursor: "pointer",
-    },
-    activeButton: {
-      backgroundColor: "#2c5282",
-    },
-    slider: {
-      width: "200px",
-      marginLeft: "10px",
-    },
-  };
+  // ラベルサイズ
+  const getLabelSize = useCallback((node) => {
+    if (!showLabels) return 0;
+    const value = node[centralityType] || 0;
+    return labelSize * (1 + value);
+  }, [showLabels, labelSize, centralityType]);
 
   return (
     <section className="network-container">
-      <h2 className="section-title">1. ネットワーク描画</h2>
-      <input type="file" accept=".csv,.xlsx" onChange={handleFileUpload} />
-      {loading && <p>読み込み中...</p>}
+      <h2 className="section-title">3. ネットワーク描画</h2>
+      <div style={{ marginBottom: "20px" }}>
+        <input
+          type="file"
+          accept=".csv,.xlsx"
+          onChange={handleFileUpload}
+          style={{ marginRight: "10px" }}
+        />
+        {loading && <span style={{ marginLeft: "10px" }}>読み込み中...</span>}
+        {error && (
+          <div style={{ color: "red", marginTop: "10px", padding: "10px", backgroundColor: "#fff3f3", borderRadius: "4px", border: "1px solid #ffcdd2" }}>
+            <strong>エラー:</strong> {error}
+          </div>
+        )}
+      </div>
       {graphData.nodes.length > 0 && (
-        <>
-          <div style={styles.controlPanel}>
-            <div style={styles.controlGroup}>
-              <h3>中心性指標の選択</h3>
-              {Object.entries(networkMetrics).map(([key, label]) => (
-                <button
-                  key={key}
-                  style={{
-                    ...styles.button,
-                    ...(selectedMetric === key ? styles.activeButton : {}),
-                  }}
-                  onClick={() => handleMetricChange(key)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            <div style={styles.controlGroup}>
-              <h3>表示設定</h3>
-              <div>
-                <label>
-                  ノードサイズ:
-                  <input
-                    type="range"
-                    min="0.1"
-                    max="3"
-                    step="0.1"
-                    value={nodeSize}
-                    onChange={(e) => setNodeSize(parseFloat(e.target.value))}
-                    style={styles.slider}
-                  />
-                  {nodeSize.toFixed(1)}
-                </label>
-              </div>
-              <div>
-                <label>
-                  エッジの閾値:
-                  <input
-                    type="range"
-                    min="0"
-                    max="2"
-                    step="0.1"
-                    value={linkThreshold}
-                    onChange={(e) => setLinkThreshold(parseFloat(e.target.value))}
-                    style={styles.slider}
-                  />
-                  {linkThreshold.toFixed(1)}
-                </label>
-              </div>
-              <div>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={showLabels}
-                    onChange={(e) => setShowLabels(e.target.checked)}
-                  />
-                  ラベルを表示
-                </label>
-              </div>
-            </div>
+        <div style={{ marginBottom: "20px" }}>
+          <div style={{ marginBottom: "10px" }}>
+            <label style={{ marginRight: "10px" }}>
+              中心性指標:
+              <select
+                value={centralityType}
+                onChange={(e) => setCentralityType(e.target.value)}
+                style={{ marginLeft: "5px" }}
+              >
+                <option value="betweenness">媒介中心性</option>
+                <option value="degree">次数中心性</option>
+                <option value="closeness">近接中心性</option>
+                <option value="eigenvector">固有ベクトル中心性</option>
+              </select>
+            </label>
           </div>
-
-          <div style={{ height: "800px", border: "1px solid #ccc", marginTop: "20px" }}>
-            <ForceGraph2D
-              graphData={graphData}
-              nodeAutoColorBy="group"
-              nodeLabel={(node) => `${node.id} (${networkMetrics[selectedMetric]}: ${(node[selectedMetric] || 0).toFixed(3)})`}
-              nodeRelSize={1}
-              nodeVal={getNodeValue}
-              linkWidth={getLinkValue}
-              linkDirectionalParticles={2}
-              linkDirectionalParticleSpeed={(d) => (d.value || 0) * 0.01}
-              nodeCanvasObject={(node, ctx, globalScale) => {
-                const label = node.id;
-                const fontSize = 12 / globalScale;
-                const nodeColor = communityColors[(node.group || 0) % communityColors.length];
-                const size = getNodeValue(node);
-
-                ctx.beginPath();
-                ctx.arc(node.x, node.y, size, 0, 2 * Math.PI);
-                ctx.fillStyle = nodeColor;
-                ctx.fill();
-                ctx.strokeStyle = "#fff";
-                ctx.lineWidth = 1.5;
-                ctx.stroke();
-
-                if (showLabels) {
-                  ctx.font = `${fontSize}px Sans-Serif`;
-                  ctx.fillStyle = "#000";
-                  ctx.textAlign = "center";
-                  ctx.textBaseline = "middle";
-                  ctx.fillText(label, node.x, node.y);
-                }
-              }}
-            />
+          <div style={{ marginBottom: "10px" }}>
+            <label style={{ marginRight: "10px" }}>
+              ノードサイズ:
+              <input
+                type="range"
+                min="2"
+                max="8"
+                value={nodeSize}
+                onChange={(e) => setNodeSize(Number(e.target.value))}
+                style={{ marginLeft: "5px" }}
+              />
+              {nodeSize}
+            </label>
           </div>
-
-          <div style={{ marginTop: "20px" }}>
-            <h3>凡例</h3>
-            <p>• ノードの大きさ: 選択した中心性指標を表します（大きいほど中心性が高い）</p>
-            <p>• ノードの色: 同じコミュニティに属するノードは同じ色で表示されます</p>
-            <p>• エッジの太さ: 関連の強さを表します（閾値以下の関連は非表示）</p>
+          <div style={{ marginBottom: "10px" }}>
+            <label style={{ marginRight: "10px" }}>
+              ラベルサイズ:
+              <input
+                type="range"
+                min="6"
+                max="16"
+                value={labelSize}
+                onChange={(e) => setLabelSize(Number(e.target.value))}
+                style={{ marginLeft: "5px" }}
+              />
+              {labelSize}
+            </label>
           </div>
-        </>
+          <div style={{ marginBottom: "10px" }}>
+            <label style={{ marginRight: "10px" }}>
+              リンクの太さ:
+              <input
+                type="range"
+                min="0.5"
+                max="3"
+                step="0.1"
+                value={linkWidth}
+                onChange={(e) => setLinkWidth(Number(e.target.value))}
+                style={{ marginLeft: "5px" }}
+              />
+              {linkWidth}
+            </label>
+          </div>
+          <div>
+            <label>
+              <input
+                type="checkbox"
+                checked={showLabels}
+                onChange={(e) => setShowLabels(e.target.checked)}
+                style={{ marginRight: "5px" }}
+              />
+              ラベルを表示
+            </label>
+          </div>
+        </div>
+      )}
+      {graphData.nodes.length > 0 ? (
+        <div style={{ height: "800px", border: "1px solid #ccc", marginTop: "20px" }}>
+          <ForceGraph2D
+            graphData={graphData}
+            nodeColor={getNodeColor}
+            nodeRelSize={getNodeSize}
+            linkWidth={(link) => linkWidth * Math.sqrt(link.value || 1)}
+            linkDirectionalParticles={2}
+            linkDirectionalParticleSpeed={(d) => (d.value || 1) * 0.01}
+            nodeCanvasObject={showLabels ? (node, ctx) => {
+              const label = node.id;
+              const fontSize = getLabelSize(node);
+              ctx.font = `${fontSize}px Sans-Serif`;
+              ctx.fillStyle = "black";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText(label, node.x, node.y);
+            } : undefined}
+          />
+        </div>
+      ) : (
+        <div style={{ padding: "20px", backgroundColor: "#f5f5f5", borderRadius: "8px", marginTop: "20px" }}>
+          <p>CSVまたはExcelファイルをアップロードしてください。</p>
+          <p>ファイル形式:</p>
+          <ul>
+            <li>列名: antecedents, consequents, lift</li>
+            <li>antecedents: 起点となる項目</li>
+            <li>consequents: 終点となる項目</li>
+            <li>lift: 関連の強さ（数値）</li>
+          </ul>
+        </div>
       )}
     </section>
   );

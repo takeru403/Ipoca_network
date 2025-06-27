@@ -1,13 +1,21 @@
-version: '3.8'
+version: '3.9'
+
 services:
   dev:
     build:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - ..:/workspace:cached
+      - ..:/workspace
     ports:
-      - "8000:8000"
-      - "8888:8888"
+      - 8000:8000
+    tty: true
+
+  jupyter:
+    image: jupyter/base-notebook
+    volumes:
+      - ..:/workspace
+    ports:
+      - 8888:8888
     environment:
-      - PYTHONUNBUFFERED=1
+      - JUPYTER_ENABLE_LAB=yes
