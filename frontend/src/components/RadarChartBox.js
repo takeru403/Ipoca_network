@@ -101,7 +101,7 @@ export default function RadarChartBox({ setToast, logout }) {
   };
 
   return (
-    <section className="radar-container">
+    <section className="section radar-container">
       <h2 className="section-title">4. レーダーチャート</h2>
 
       <div className="upload-area">

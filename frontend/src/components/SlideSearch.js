@@ -32,7 +32,7 @@ export default function SlideSearch({ setToast, logout }) {
   };
 
   return (
-    <section className="slide-search-container">
+    <section className="section slide-search-container">
       <h2 className="section-title">5. スライド検索</h2>
 
       <div className="search-box">

@@ -1,24 +1,27 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { fetchJSON } from "../api";
 
-const FactPannel = () => {
-  const [file, setFile] = useState(null);
+const FactPannel = ({ file }) => {
   const [narrationText, setNarrationText] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const audioRef = useRef(null);
 
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-  };
+  // fileがpropsで渡されたら自動でナレーション生成
+  useEffect(() => {
+    if (file) {
+      handleGenerate(file);
+    }
+    // eslint-disable-next-line
+  }, [file]);
 
-  const handleGenerate = async () => {
-    if (!file) return;
+  const handleGenerate = async (inputFile) => {
+    if (!inputFile) return;
     setLoading(true);
     setNarrationText("");
     setAudioUrl("");
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", inputFile);
     try {
       const res = await fetch("/api/factpanel/narration", {
         method: "POST",
@@ -47,11 +50,8 @@ const FactPannel = () => {
 
   return (
     <section className="fact-narration-panel">
-      <h2>📊 ファクトパネル（音声ナレーション）</h2>
-      <input type="file" accept=".csv" onChange={handleFileChange} />
-      <button onClick={handleGenerate} disabled={loading || !file} style={{ marginLeft: 10 }}>
-        {loading ? "生成中..." : "ナレーション生成"}
-      </button>
+      <h3>音声ナレーション</h3>
+      {loading && <p>生成中...</p>}
       {narrationText && (
         <div style={{ marginTop: 20 }}>
           <h4>ナレーション内容</h4>
@@ -65,6 +65,9 @@ const FactPannel = () => {
             <button onClick={handleDownload}>ダウンロード</button>
           </div>
         </div>
+      )}
+      {!file && (
+        <p style={{ color: '#888', marginTop: 20 }}>POSデータ前処理でファイルをアップロードすると、ここでナレーションが再生できます。</p>
       )}
     </section>
   );

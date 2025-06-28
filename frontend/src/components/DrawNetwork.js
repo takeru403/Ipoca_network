@@ -66,31 +66,34 @@ const DrawNetwork = () => {
   }, [showLabels, labelSize, centralityType]);
 
   return (
-    <section className="network-container">
+    <section className="section network-container">
       <h2 className="section-title">3. ネットワーク描画</h2>
-      <div style={{ marginBottom: "20px" }}>
+      <div className="upload-area">
+        <h3 style={{ margin: "0 0 1rem 0", color: "#007bff", fontWeight: "600" }}>🌐 ネットワークファイル</h3>
         <input
           type="file"
           accept=".csv,.xlsx"
           onChange={handleFileUpload}
+          className="file-input"
           style={{ marginRight: "10px" }}
         />
-        {loading && <span style={{ marginLeft: "10px" }}>読み込み中...</span>}
+        {loading && <span className="status-message">⏳ 読み込み中...</span>}
         {error && (
-          <div style={{ color: "red", marginTop: "10px", padding: "10px", backgroundColor: "#fff3f3", borderRadius: "4px", border: "1px solid #ffcdd2" }}>
+          <div className="error-message">
             <strong>エラー:</strong> {error}
           </div>
         )}
       </div>
       {graphData.nodes.length > 0 && (
-        <div style={{ marginBottom: "20px" }}>
+        <div style={{ marginBottom: "20px", padding: "1.5rem", background: "rgba(248, 249, 250, 0.8)", borderRadius: "16px", border: "1px solid rgba(0, 123, 255, 0.1)" }}>
+          <h3 style={{ margin: "0 0 1rem 0", color: "#007bff", fontWeight: "600" }}>⚙️ 表示設定</h3>
           <div style={{ marginBottom: "10px" }}>
-            <label style={{ marginRight: "10px" }}>
-              中心性指標:
+            <label style={{ marginRight: "10px", fontWeight: "500" }}>
+              🎯 中心性指標:
               <select
                 value={centralityType}
                 onChange={(e) => setCentralityType(e.target.value)}
-                style={{ marginLeft: "5px" }}
+                style={{ marginLeft: "5px", padding: "0.3rem", border: "2px solid #e9ecef", borderRadius: "8px" }}
               >
                 <option value="betweenness">媒介中心性</option>
                 <option value="degree">次数中心性</option>
@@ -100,8 +103,8 @@ const DrawNetwork = () => {
             </label>
           </div>
           <div style={{ marginBottom: "10px" }}>
-            <label style={{ marginRight: "10px" }}>
-              ノードサイズ:
+            <label style={{ marginRight: "10px", fontWeight: "500" }}>
+              📏 ノードサイズ:
               <input
                 type="range"
                 min="2"
@@ -114,8 +117,8 @@ const DrawNetwork = () => {
             </label>
           </div>
           <div style={{ marginBottom: "10px" }}>
-            <label style={{ marginRight: "10px" }}>
-              ラベルサイズ:
+            <label style={{ marginRight: "10px", fontWeight: "500" }}>
+              📝 ラベルサイズ:
               <input
                 type="range"
                 min="6"
@@ -128,8 +131,8 @@ const DrawNetwork = () => {
             </label>
           </div>
           <div style={{ marginBottom: "10px" }}>
-            <label style={{ marginRight: "10px" }}>
-              リンクの太さ:
+            <label style={{ marginRight: "10px", fontWeight: "500" }}>
+              🔗 リンクの太さ:
               <input
                 type="range"
                 min="0.5"
@@ -143,20 +146,20 @@ const DrawNetwork = () => {
             </label>
           </div>
           <div>
-            <label>
+            <label style={{ fontWeight: "500" }}>
               <input
                 type="checkbox"
                 checked={showLabels}
                 onChange={(e) => setShowLabels(e.target.checked)}
                 style={{ marginRight: "5px" }}
               />
-              ラベルを表示
+              🏷️ ラベルを表示
             </label>
           </div>
         </div>
       )}
       {graphData.nodes.length > 0 ? (
-        <div style={{ height: "800px", border: "1px solid #ccc", marginTop: "20px" }}>
+        <div style={{ height: "800px", border: "2px solid rgba(0, 123, 255, 0.1)", borderRadius: "16px", marginTop: "20px", background: "rgba(255, 255, 255, 0.8)", overflow: "hidden" }}>
           <ForceGraph2D
             graphData={graphData}
             nodeColor={getNodeColor}
@@ -176,15 +179,18 @@ const DrawNetwork = () => {
           />
         </div>
       ) : (
-        <div style={{ padding: "20px", backgroundColor: "#f5f5f5", borderRadius: "8px", marginTop: "20px" }}>
+        <div style={{ padding: "2rem", background: "rgba(248, 249, 250, 0.8)", borderRadius: "16px", marginTop: "20px", border: "1px solid rgba(0, 123, 255, 0.1)", textAlign: "center" }}>
+          <h3 style={{ color: "#007bff", marginBottom: "1rem" }}>📁 ファイルをアップロードしてください</h3>
           <p>CSVまたはExcelファイルをアップロードしてください。</p>
-          <p>ファイル形式:</p>
-          <ul>
-            <li>列名: antecedents, consequents, lift</li>
-            <li>antecedents: 起点となる項目</li>
-            <li>consequents: 終点となる項目</li>
-            <li>lift: 関連の強さ（数値）</li>
-          </ul>
+          <div style={{ marginTop: "1rem", textAlign: "left", display: "inline-block" }}>
+            <p><strong>ファイル形式:</strong></p>
+            <ul style={{ listStyle: "none", padding: 0 }}>
+              <li>📊 <strong>列名:</strong> antecedents, consequents, lift</li>
+              <li>🎯 <strong>antecedents:</strong> 起点となる項目</li>
+              <li>🎯 <strong>consequents:</strong> 終点となる項目</li>
+              <li>📈 <strong>lift:</strong> 関連の強さ（数値）</li>
+            </ul>
+          </div>
         </div>
       )}
     </section>

@@ -5,7 +5,7 @@ from .fact_narration import generate_narration_with_llm, create_narration_audio
 
 factpanel_bp = Blueprint("factpanel", __name__, url_prefix="/api/factpanel")
 
-@factpanel_bp.route("/narration", methods=[POST])
+@factpanel_bp.route("/narration", methods=["POST"])
 def narration():
     # フロントからCSVファイルを受け取り、ナレーション生成
     if 'file' not in request.files:

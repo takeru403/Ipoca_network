@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { fetchJSON } from "../api";
 import "../App.css";
 
-export default function PosData() {
+export default function PosData({ setUploadedPosFile }) {
   const [file, setFile] = useState(null);
   const [columns, setColumns] = useState([]);
   const [columnMapping, setColumnMapping] = useState({});
@@ -26,6 +26,7 @@ export default function PosData() {
   const handleFileUpload = async (event) => {
     const uploadedFile = event.target.files[0];
     if (!uploadedFile) return;
+    setUploadedPosFile && setUploadedPosFile(uploadedFile);
 
     setLoading(true);
     setError(null);
@@ -155,21 +156,22 @@ export default function PosData() {
   };
 
   return (
-    <section className="posdata-container">
+    <section className="section posdata-container">
       <h2 className="section-title">1. POSデータ前処理</h2>
 
       {/* ファイルアップロード */}
-      <div style={{ marginBottom: "20px" }}>
-        <h3>ファイルアップロード</h3>
+      <div className="upload-area">
+        <h3 style={{ margin: "0 0 1rem 0", color: "#007bff", fontWeight: "600" }}>📁 POSデータのアップロード</h3>
         <input
           type="file"
           accept=".csv,.xlsx"
           onChange={handleFileUpload}
+          className="file-input"
           style={{ marginBottom: "10px" }}
         />
-        {loading && <p>読み込み中...</p>}
+        {loading && <p className="status-message">⏳ 読み込み中...</p>}
         {error && (
-          <div style={{ color: "red", marginTop: "10px" }}>
+          <div className="error-message">
             エラー: {error}
           </div>
         )}
@@ -177,9 +179,9 @@ export default function PosData() {
 
       {/* 列名マッピング */}
       {columns.length > 0 && (
-        <div style={{ marginBottom: "20px" }}>
-          <h3>列名マッピング</h3>
-          <p>POSデータの列名を適切な意味にマッピングしてください</p>
+        <div style={{ marginBottom: "20px", padding: "1.5rem", background: "rgba(248, 249, 250, 0.8)", borderRadius: "16px", border: "1px solid rgba(0, 123, 255, 0.1)" }}>
+          <h3 style={{ margin: "0 0 1rem 0", color: "#007bff", fontWeight: "600" }}>🔗 列名マッピング</h3>
+          <p className="instruction-text">POSデータの列名を適切な意味にマッピングしてください</p>
           {Object.entries(requiredColumns).map(([requiredCol, description]) => (
             <div key={requiredCol} style={{ marginBottom: "10px" }}>
               <label style={{ display: "block", marginBottom: "5px" }}>

@@ -183,18 +183,18 @@ const Cluster = () => {
   };
 
   return (
-    <section className="cluster-container">
+    <section className="section cluster-container">
       <h2 className="section-title">2. 顧客属性クラスタリング</h2>
-      <div style={{ marginBottom: 20 }}>
-        <label>
-          クラスタ数:
+      <div className="upload-area">
+        <label style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: "600", color: "#007bff" }}>
+          🎯 クラスタ数:
           <input
             type="number"
             min={2}
             max={10}
             value={nClusters}
             onChange={e => setNClusters(Number(e.target.value))}
-            style={{ width: 60, marginLeft: 10 }}
+            style={{ width: 80, padding: "0.5rem", border: "2px solid #e9ecef", borderRadius: "8px", textAlign: "center" }}
           />
         </label>
       </div>
