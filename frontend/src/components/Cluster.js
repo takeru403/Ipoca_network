@@ -10,7 +10,7 @@ import {
 } from "recharts";
 import { saveAs } from "file-saver";
 
-const Cluster = () => {
+const Cluster = React.memo(({ autoProcessId }) => {
   const [file, setFile] = useState(null);
   const [nClusters, setNClusters] = useState(4);
   const [loading, setLoading] = useState(false);
@@ -24,6 +24,43 @@ const Cluster = () => {
   const [selectedClusters, setSelectedClusters] = useState([]);
   const [clusterCounts, setClusterCounts] = useState({});
   const [clusteredData, setClusteredData] = useState([]);
+  const [downloadFilename, setDownloadFilename] = useState(null);
+  const [convertingToPos, setConvertingToPos] = useState(false);
+
+  // autoProcessIdで自動描画
+  useEffect(() => {
+    if (!autoProcessId) return;
+    setLoading(true);
+    setError(null);
+    // 自動処理のクラスタリング結果APIから取得
+    fetch(`/api/posdata/auto-download/${autoProcessId}/clustering`, { credentials: 'include' })
+      .then(res => {
+        if (!res.ok) throw new Error('自動クラスタリング結果の取得に失敗しました');
+        return res.json();
+      })
+      .then(data => {
+        // 期待するデータ形式に合わせてセット
+        if (data.cluster_names) setClusterNames(data.cluster_names);
+        if (data.radar_chart_data) setRadarData(data.radar_chart_data);
+        if (data.agg_df) setClusteredData(data.agg_df);
+        if (data.download_filename) setDownloadFilename(data.download_filename);
+        // カラム情報
+        if (data.columns) setColumns(data.columns);
+        if (data.columns) setSelectedColumns(data.columns);
+        // 件数
+        if (data.agg_df) {
+          const counts = {};
+          data.agg_df.forEach(row => {
+            if (row["クラスタ名"]) {
+              counts[row["クラスタ名"]] = (counts[row["クラスタ名"]] || 0) + 1;
+            }
+          });
+          setClusterCounts(counts);
+        }
+      })
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false));
+  }, [autoProcessId]);
 
   // ファイルアップロード＆プレビュー取得
   const handleFileChange = async (e) => {
@@ -39,6 +76,7 @@ const Cluster = () => {
     setSelectedClusters([]);
     setClusterCounts({});
     setClusteredData([]);
+    setDownloadFilename(null);
     if (!f) return;
     const formData = new FormData();
     formData.append("file", f);
@@ -78,6 +116,7 @@ const Cluster = () => {
     setSelectedClusters([]);
     setClusterCounts({});
     setClusteredData([]);
+    setDownloadFilename(null);
     const formData = new FormData();
     formData.append("n_clusters", nClusters);
     formData.append("selected_columns", JSON.stringify(selectedColumns));
@@ -94,6 +133,7 @@ const Cluster = () => {
       const data = await res.json();
       setClusterNames(data.cluster_names);
       setRadarData(data.radar_chart_data);
+      setDownloadFilename(data.download_filename);
       // 件数取得
       if (data.agg_df) {
         setClusteredData(data.agg_df);
@@ -182,9 +222,107 @@ const Cluster = () => {
     saveAs(blob, "selected_clusters.csv");
   };
 
+  // 全クラスタリング結果ダウンロード
+  const handleDownloadAllResults = async () => {
+    if (!downloadFilename) return;
+    try {
+      const response = await fetch(`/api/cluster/download/${downloadFilename}`, {
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = downloadFilename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+    } catch (error) {
+      setError('ダウンロードに失敗しました');
+    }
+  };
+
+  // クラスタリング結果をPOSデータに変換
+  const handleConvertToPos = async () => {
+    if (!file) return;
+
+    setConvertingToPos(true);
+    setError(null);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/api/cluster/convert-for-pos', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `変換に失敗しました: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // 変換されたPOSデータをダウンロード
+      const downloadResponse = await fetch(`/api/cluster/download/${data.filename}`, {
+        credentials: 'include'
+      });
+
+      if (downloadResponse.ok) {
+        const blob = await downloadResponse.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = data.filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setConvertingToPos(false);
+    }
+  };
+
   return (
     <section className="section cluster-container">
       <h2 className="section-title">2. 顧客属性クラスタリング</h2>
+
+      {/* 互換性機能の説明 */}
+      <div style={{ marginBottom: "20px", padding: "1.5rem", background: "linear-gradient(135deg, #fff3cd, #ffeaa7)", borderRadius: "16px", border: "2px solid #ffc107" }}>
+        <h3 style={{ margin: "0 0 1rem 0", color: "#856404", fontWeight: "600" }}>🔄 データ互換性機能</h3>
+        <p style={{ marginBottom: "1rem", color: "#856404" }}>
+          クラスタリング結果をPOSデータ前処理で再利用できるように変換できます。
+        </p>
+        {clusteredData.length > 0 && (
+          <button
+            onClick={handleConvertToPos}
+            disabled={convertingToPos}
+            style={{
+              padding: "10px 20px",
+              backgroundColor: "#ffc107",
+              color: "#856404",
+              border: "none",
+              borderRadius: "8px",
+              cursor: convertingToPos ? "not-allowed" : "pointer",
+              fontWeight: "600"
+            }}
+          >
+            {convertingToPos ? "⏳ 変換中..." : "🔄 POSデータ形式に変換"}
+          </button>
+        )}
+      </div>
+
       <div className="upload-area">
         <label style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: "600", color: "#007bff" }}>
           🎯 クラスタ数:
@@ -266,13 +404,23 @@ const Cluster = () => {
               </li>
             ))}
           </ul>
-          <button
-            onClick={handleDownloadCSV}
-            disabled={!selectedClusters.length || !clusteredData.length}
-            style={{ padding: "6px 16px", background: "#1976d2", color: "white", border: "none", borderRadius: 4 }}
-          >
-            選択クラスタをCSVダウンロード
-          </button>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <button
+              onClick={handleDownloadCSV}
+              disabled={!selectedClusters.length || !clusteredData.length}
+              style={{ padding: "6px 16px", background: "#1976d2", color: "white", border: "none", borderRadius: 4 }}
+            >
+              選択クラスタをCSVダウンロード
+            </button>
+            {downloadFilename && (
+              <button
+                onClick={handleDownloadAllResults}
+                style={{ padding: "6px 16px", background: "#28a745", color: "white", border: "none", borderRadius: 4 }}
+              >
+                📥 全クラスタリング結果をダウンロード
+              </button>
+            )}
+          </div>
         </div>
       )}
       {radarData && radarData.length > 0 && (
@@ -313,6 +461,6 @@ const Cluster = () => {
       )}
     </section>
   );
-};
+});
 
 export default Cluster;

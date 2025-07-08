@@ -150,59 +150,87 @@ def name_clusters(agg_df, features):
 
 # --- レーダーチャート用データ生成 ---
 def get_radar_chart_data(df, features, cluster_label_col="クラスタ名"):
-    # クラスタごとに特徴量の平均値を計算
+    # クラスタごとに特徴量の平均値を計算（実数値のまま）
     cluster_summary = df.groupby(cluster_label_col)[features].mean()
-    # 0-1正規化
-    cluster_summary_norm = (cluster_summary - cluster_summary.min()) / (cluster_summary.max() - cluster_summary.min())
     # Recharts用データ形式に変換
     data = []
-    for metric in cluster_summary_norm.columns:
+    for metric in cluster_summary.columns:
         row = {"metric": metric}
-        for cluster in cluster_summary_norm.index:
-            row[cluster] = round(cluster_summary_norm.loc[cluster, metric], 3)
+        for cluster in cluster_summary.index:
+            # 実数値を小数第2位まで四捨五入
+            row[cluster] = round(cluster_summary.loc[cluster, metric], 2)
         data.append(row)
     return data
 
 # --- メイン処理関数 ---
 def cluster_main(df, n_clusters=4):
-    df = flexible_preprocess(df)
-    # 特徴量リスト
-    features = list(df.columns)
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(df[features])
-    kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init='auto')
-    df["クラスタ"] = kmeans.fit_predict(X_scaled)
-    # LLMでクラスタ名付け
-    load_dotenv(find_dotenv("../.env"))
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-    llm = ChatOpenAI(model="gpt-4", temperature=0.7, openai_api_key=OPENAI_API_KEY)
-    prompt_template = PromptTemplate(
-        input_variables=["features"],
-        template="""
+    try:
+        import logging
+        logging.info(f"クラスタリング開始: {len(df)} 行, {len(df.columns)} 列")
+
+        df = flexible_preprocess(df)
+        logging.info(f"前処理完了: {len(df)} 行, {len(df.columns)} 列")
+
+        # 特徴量リスト
+        features = list(df.columns)
+        logging.info(f"特徴量: {features}")
+
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(df[features])
+        logging.info(f"スケーリング完了: {X_scaled.shape}")
+
+        kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init='auto')
+        df["クラスタ"] = kmeans.fit_predict(X_scaled)
+        logging.info("K-means完了")
+
+        # LLMでクラスタ名付け
+        logging.info("LLMクラスタ名付け開始")
+        load_dotenv(find_dotenv("../.env"))
+        OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+        llm = ChatOpenAI(model="gpt-4", temperature=0.7, openai_api_key=OPENAI_API_KEY)
+        prompt_template = PromptTemplate(
+            input_variables=["features"],
+            template="""
 以下の購買パターンの顧客クラスタに対して、マーケティング担当者がわかりやすく社内共有しやすい名前を1つつけてください。
 特徴: {features}
 例:「昼間によく来るシニア女性」「頻繁にまとめ買いする家族層」など
 """
-    )
-    cluster_descriptions = []
-    for cluster_id in sorted(df["クラスタ"].unique()):
-        sub = df[df["クラスタ"] == cluster_id][features]
-        desc = sub.mean().round(2).to_dict()
-        cluster_descriptions.append((cluster_id, desc))
-    cluster_names = {}
-    for cluster_id, desc in cluster_descriptions:
-        prompt = prompt_template.format(features=desc)
-        messages = [
-            SystemMessage(content="あなたはマーケティング部門の分析担当者です。"),
-            HumanMessage(content=prompt)
-        ]
-        response = llm(messages)
-        cluster_names[str(cluster_id)] = response.content.strip()
-    df["クラスタ名"] = df["クラスタ"].map(lambda x: cluster_names[str(x)])
-    # レーダーチャート用データ
-    radar_chart_data = get_radar_chart_data(df, features)
-    return {
-        "cluster_names": cluster_names,
-        "radar_chart_data": radar_chart_data,
-        "agg_df": df
-    }
+        )
+        cluster_descriptions = []
+        for cluster_id in sorted(df["クラスタ"].unique()):
+            sub = df[df["クラスタ"] == cluster_id][features]
+            desc = sub.mean().round(2).to_dict()
+            cluster_descriptions.append((cluster_id, desc))
+
+        cluster_names = {}
+        for cluster_id, desc in cluster_descriptions:
+            prompt = prompt_template.format(features=desc)
+            messages = [
+                SystemMessage(content="あなたはマーケティング部門の分析担当者です。"),
+                HumanMessage(content=prompt)
+            ]
+            response = llm(messages)
+            cluster_names[str(cluster_id)] = response.content.strip()
+
+        df["クラスタ名"] = df["クラスタ"].map(lambda x: cluster_names[str(x)])
+        logging.info("LLMクラスタ名付け完了")
+
+        # レーダーチャートデータ生成
+        logging.info("レーダーチャートデータ生成開始")
+        radar_chart_data = get_radar_chart_data(df, features, "クラスタ名")
+        logging.info("レーダーチャートデータ生成完了")
+
+        logging.info("クラスタリング処理完了")
+        return {
+            "agg_df": df,
+            "cluster_names": cluster_names,
+            "radar_chart_data": radar_chart_data
+        }
+
+    except Exception as e:
+        import logging
+        import traceback
+        logging.error(f"クラスタリングエラー: {str(e)}")
+        logging.error(f"エラー詳細: {type(e).__name__}")
+        logging.error(f"スタックトレース: {traceback.format_exc()}")
+        raise

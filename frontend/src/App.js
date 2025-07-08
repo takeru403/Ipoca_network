@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import "./App.css";
 import LoginForm from "./components/LoginForm";
 import RadarChartBox from "./components/RadarChartBox";
@@ -18,14 +18,95 @@ function App() {
   const [showStudioPanel, setShowStudioPanel] = useState(true);
   const [showMindMap, setShowMindMap] = useState(false);
   const [uploadedPosFile, setUploadedPosFile] = useState(null);
+  const [autoProcessId, setAutoProcessId] = useState(null);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await fetchJSON("/api/logout", { method: "POST", credentials: "include" });
     } catch (_) { }
     setIsLoggedIn(false);
     setToast("ログアウトしました");
-  };
+  }, []);
+
+  // メインコンテンツをメモ化して不要な再レンダリングを防ぐ
+  const mainContent = useMemo(() => {
+    if (showMindMap) {
+      return (
+        <div>
+          <button
+            onClick={() => setShowMindMap(false)}
+            style={{
+              margin: "1em 0",
+              background: "linear-gradient(135deg, #e3f2fd, #bbdefb)",
+              border: "2px solid #007bff",
+              padding: "0.8rem 1.5rem",
+              borderRadius: "12px",
+              fontWeight: "600",
+              color: "#007bff",
+              cursor: "pointer",
+              transition: "all 0.3s ease",
+              boxShadow: "0 4px 15px rgba(0, 123, 255, 0.2)"
+            }}
+          >
+            ← マインドマップを閉じる
+          </button>
+          <MindMap />
+        </div>
+      );
+    } else {
+      return (
+        <>
+          {/* POSデータ前処理 */}
+          <PosData setUploadedPosFile={setUploadedPosFile} onAutoProcessComplete={setAutoProcessId} />
+          {/* クラスタリング */}
+          <Cluster autoProcessId={autoProcessId} />
+          {/* ネットワーク描画 */}
+          <DrawNetwork autoProcessId={autoProcessId} />
+          {/* レーダーチャート */}
+          <RadarChartBox setToast={setToast} logout={logout} autoProcessId={autoProcessId} />
+          {/* スライド検索 */}
+          <SlideSearch setToast={setToast} logout={logout} />
+        </>
+      );
+    }
+  }, [showMindMap, autoProcessId]);
+
+  // ファクトパネルをメモ化
+  const factPanel = useMemo(() => (
+    <aside className="fact-panel">
+      <div className="panel-header">
+        <h2 className="panel-title">📊 ファクトパネル</h2>
+        <p className="panel-description">「1.POSデータ前処理」にアップロードしたデータのファクトに関して、音声ナレーションを行います。</p>
+      </div>
+      <div className="panel-content">
+        <FactPannel file={uploadedPosFile} />
+      </div>
+    </aside>
+  ), [uploadedPosFile]);
+
+  // Studioパネルをメモ化
+  const studioPanel = useMemo(() => (
+    <aside className="studio-panel">
+      <div className="panel-header">
+        <h2 className="panel-title">🧠 ソリューションパネル</h2>
+        <p className="panel-description">販促事例のアイデア、分析をここに記載できます。</p>
+      </div>
+      <div className="panel-content">
+        <button
+          className={`panel-button ${showMindMap ? 'active' : ''}`}
+          onClick={() => setShowMindMap(true)}
+        >
+          ✅ マインドマップ
+        </button>
+        <button className="panel-button">
+          🗂 音声スライド要約
+        </button>
+        <button className="panel-button">
+          📖 ノート記事作成
+        </button>
+      </div>
+    </aside>
+  ), [showMindMap]);
 
   if (!isLoggedIn) {
     return <LoginForm onLogin={() => setIsLoggedIn(true)} />;
@@ -67,80 +148,15 @@ function App() {
 
       <div className="main-layout">
         {/* ファクトパネル */}
-        {showPanel && showFactPanel && (
-          <aside className="fact-panel">
-            <div className="panel-header">
-              <h2 className="panel-title">📊 ファクトパネル</h2>
-              <p className="panel-description">「1.POSデータ前処理」にアップロードしたデータのファクトに関して、音声ナレーションを行います。</p>
-            </div>
-            <div className="panel-content">
-              <FactPannel file={uploadedPosFile} />
-            </div>
-          </aside>
-        )}
+        {showPanel && showFactPanel && factPanel}
 
         {/* メインコンテンツ */}
         <main className={`main-content ${showPanel && (showFactPanel || showStudioPanel) ? 'main-content-with-panels' : 'main-content-without-panels'}`}>
-          {showMindMap ? (
-            <div>
-              <button
-                onClick={() => setShowMindMap(false)}
-                style={{
-                  margin: "1em 0",
-                  background: "linear-gradient(135deg, #e3f2fd, #bbdefb)",
-                  border: "2px solid #007bff",
-                  padding: "0.8rem 1.5rem",
-                  borderRadius: "12px",
-                  fontWeight: "600",
-                  color: "#007bff",
-                  cursor: "pointer",
-                  transition: "all 0.3s ease",
-                  boxShadow: "0 4px 15px rgba(0, 123, 255, 0.2)"
-                }}
-              >
-                ← マインドマップを閉じる
-              </button>
-              <MindMap />
-            </div>
-          ) : (
-            <>
-              {/* POSデータ前処理 */}
-              <PosData setUploadedPosFile={setUploadedPosFile} />
-              {/* クラスタリング */}
-              <Cluster />
-              {/* ネットワーク描画 */}
-              <DrawNetwork />
-              {/* レーダーチャート */}
-              <RadarChartBox setToast={setToast} logout={logout} />
-              {/* スライド検索 */}
-              <SlideSearch setToast={setToast} logout={logout} />
-            </>
-          )}
+          {mainContent}
         </main>
 
         {/* Studioパネル */}
-        {showPanel && showStudioPanel && (
-          <aside className="studio-panel">
-            <div className="panel-header">
-              <h2 className="panel-title">🧠 Studioパネル</h2>
-              <p className="panel-description">販促事例のアイデア、分析をここに記載できます。</p>
-            </div>
-            <div className="panel-content">
-              <button
-                className={`panel-button ${showMindMap ? 'active' : ''}`}
-                onClick={() => setShowMindMap(true)}
-              >
-                ✅ マインドマップ
-              </button>
-              <button className="panel-button">
-                🗂 音声スライド要約
-              </button>
-              <button className="panel-button">
-                📖 ノート記事作成
-              </button>
-            </div>
-          </aside>
-        )}
+        {showPanel && showStudioPanel && studioPanel}
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 // frontend/src/components/RadarChartBox.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   RadarChart,
   Radar,
@@ -10,9 +10,10 @@ import {
   Legend
 } from "recharts";
 import { fetchJSON } from "../api";
+import { saveAs } from "file-saver";
 import "../App.css";
 
-export default function RadarChartBox({ setToast, logout }) {
+export default React.memo(function RadarChartBox({ setToast, logout, autoProcessId }) {
   const [file, setFile] = useState(null);
   const [tenantOptions, setTenantOptions] = useState([]);
   const [selectedTenants, setSelectedTenants] = useState([]);
@@ -100,6 +101,77 @@ export default function RadarChartBox({ setToast, logout }) {
     }
   };
 
+  // レーダーチャートデータのダウンロード
+  const handleDownloadRadarData = () => {
+    if (!radarData.length) return;
+
+    // CSV形式でダウンロード
+    const columns = ['metric', ...selectedTenants];
+    const csv = [columns.join(',')].concat(
+      radarData.map(row =>
+        columns.map(col => `"${row[col] || ''}"`).join(',')
+      )
+    ).join('\n');
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    saveAs(blob, "radar_chart_data.csv");
+  };
+
+  // レーダーチャート統計情報のダウンロード
+  const handleDownloadRadarStats = () => {
+    if (!radarData.length) return;
+
+    const stats = {
+      tenants_count: selectedTenants.length,
+      metrics_count: radarData.length,
+      tenants: selectedTenants,
+      metrics: radarData.map(row => row.metric),
+      tenant_stats: selectedTenants.map(tenant => {
+        const values = radarData.map(row => parseFloat(row[tenant]) || 0);
+        return {
+          tenant: tenant,
+          min: Math.min(...values),
+          max: Math.max(...values),
+          avg: values.reduce((sum, val) => sum + val, 0) / values.length,
+          total: values.reduce((sum, val) => sum + val, 0)
+        };
+      }),
+      metric_stats: radarData.map(row => {
+        const values = selectedTenants.map(tenant => parseFloat(row[tenant]) || 0);
+        return {
+          metric: row.metric,
+          min: Math.min(...values),
+          max: Math.max(...values),
+          avg: values.reduce((sum, val) => sum + val, 0) / values.length,
+          total: values.reduce((sum, val) => sum + val, 0)
+        };
+      })
+    };
+
+    const statsJson = JSON.stringify(stats, null, 2);
+    const statsBlob = new Blob([statsJson], { type: "application/json;charset=utf-8;" });
+    saveAs(statsBlob, "radar_chart_statistics.json");
+  };
+
+  // autoProcessIdで自動描画
+  useEffect(() => {
+    if (!autoProcessId) return;
+    setLoading(true);
+    // レーダーチャートデータ取得
+    fetch(`/api/posdata/auto-download/${autoProcessId}/radar`, { credentials: 'include' })
+      .then(res => {
+        if (!res.ok) throw new Error('自動レーダーチャート結果の取得に失敗しました');
+        return res.json();
+      })
+      .then(data => {
+        if (data.tenants) setTenantOptions(data.tenants);
+        if (data.selected_tenants) setSelectedTenants(data.selected_tenants);
+        if (data.radar_data) setRadarData(data.radar_data);
+      })
+      .catch(e => setToast(e.message))
+      .finally(() => setLoading(false));
+  }, [autoProcessId, setToast]);
+
   return (
     <section className="section radar-container">
       <h2 className="section-title">4. レーダーチャート</h2>
@@ -138,6 +210,46 @@ export default function RadarChartBox({ setToast, logout }) {
       )}
 
       {loading && <p className="status-message">⏳ 読み込み中…</p>}
+
+      {/* ダウンロード機能 */}
+      {radarData.length > 0 && (
+        <div style={{ marginBottom: "20px", padding: "1.5rem", background: "linear-gradient(135deg, #f3e5f5, #e1bee7)", borderRadius: "16px", border: "2px solid #9c27b0" }}>
+          <h3 style={{ margin: "0 0 1rem 0", color: "#7b1fa2", fontWeight: "600" }}>📥 レーダーチャートデータダウンロード</h3>
+          <p style={{ marginBottom: "1rem", color: "#6a1b9a" }}>
+            レーダーチャートのデータと統計情報をダウンロードできます。
+          </p>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <button
+              onClick={handleDownloadRadarData}
+              style={{
+                padding: "8px 16px",
+                backgroundColor: "#9c27b0",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontSize: "14px"
+              }}
+            >
+              📊 レーダーチャートデータをダウンロード
+            </button>
+            <button
+              onClick={handleDownloadRadarStats}
+              style={{
+                padding: "8px 16px",
+                backgroundColor: "#4caf50",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontSize: "14px"
+              }}
+            >
+              📈 統計情報をダウンロード
+            </button>
+          </div>
+        </div>
+      )}
 
       {radarData.length > 0 && (
         <div className="radar-chart-wrapper">
@@ -229,4 +341,4 @@ export default function RadarChartBox({ setToast, logout }) {
       )}
     </section>
   );
-}
+});

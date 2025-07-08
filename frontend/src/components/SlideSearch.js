@@ -5,7 +5,7 @@ import "../App.css";
 
 const presentationId = "1xW8Lze5bfwUzNd9ZqputgTFyQJdoKK3f3I7esGACAds";
 
-export default function SlideSearch({ setToast, logout }) {
+export default React.memo(function SlideSearch({ setToast, logout }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -74,4 +74,4 @@ export default function SlideSearch({ setToast, logout }) {
       ></iframe>
     </section>
   );
-}
+});

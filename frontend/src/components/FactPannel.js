@@ -1,27 +1,71 @@
 import React, { useState, useRef, useEffect } from "react";
 import { fetchJSON } from "../api";
 
-const FactPannel = ({ file }) => {
+const FactPannel = React.memo(({ file }) => {
   const [narrationText, setNarrationText] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
   const [loading, setLoading] = useState(false);
+  const [processedFiles, setProcessedFiles] = useState(new Set());
+  const [fileHash, setFileHash] = useState("");
   const audioRef = useRef(null);
 
-  // fileがpropsで渡されたら自動でナレーション生成
+  // localStorageから処理済みファイルを読み込み
+  useEffect(() => {
+    const savedProcessedFiles = localStorage.getItem('factPannelProcessedFiles');
+    if (savedProcessedFiles) {
+      try {
+        const parsed = JSON.parse(savedProcessedFiles);
+        setProcessedFiles(new Set(parsed));
+      } catch (e) {
+        console.error('Failed to parse processed files from localStorage:', e);
+      }
+    }
+  }, []);
+
+  // ファイルのハッシュ値を計算する関数
+  const calculateFileHash = async (file) => {
+    if (!file) return "";
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  };
+
+  // fileがpropsで渡されたらハッシュ値を計算
   useEffect(() => {
     if (file) {
-      handleGenerate(file);
+      calculateFileHash(file).then(hash => {
+        setFileHash(hash);
+      });
+    } else {
+      setFileHash("");
     }
-    // eslint-disable-next-line
   }, [file]);
 
-  const handleGenerate = async (inputFile) => {
+  // ファイルが変更された場合は必ず自動実行（processedFilesの有無に関係なく）
+  useEffect(() => {
+    if (file && fileHash) {
+      handleGenerate(file, fileHash, true); // force=trueで必ず生成
+    }
+  }, [fileHash]);
+
+  const handleGenerate = async (inputFile, hash = null, force = false) => {
     if (!inputFile) return;
+
+    const currentHash = hash || await calculateFileHash(inputFile);
+
+    // 既に処理済みの場合はスキップ（force=trueなら無視して再生成）
+    if (!force && processedFiles.has(currentHash)) {
+      return;
+    }
+
     setLoading(true);
     setNarrationText("");
     setAudioUrl("");
+
     const formData = new FormData();
     formData.append("file", inputFile);
+
     try {
       const res = await fetch("/api/factpanel/narration", {
         method: "POST",
@@ -31,10 +75,24 @@ const FactPannel = ({ file }) => {
       const data = await res.json();
       setNarrationText(data.narration_text);
       setAudioUrl(`/api/factpanel/audio/${data.audio_file}`);
+
+      // 処理済みファイルとして記録
+      const newProcessedFiles = new Set([...processedFiles, currentHash]);
+      setProcessedFiles(newProcessedFiles);
+
+      // localStorageに保存
+      localStorage.setItem('factPannelProcessedFiles', JSON.stringify([...newProcessedFiles]));
     } catch (e) {
       setNarrationText("ナレーション生成に失敗しました");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 手動実行ボタンのハンドラー
+  const handleManualGenerate = () => {
+    if (file) {
+      handleGenerate(file, fileHash, true); // force=trueで必ず再生成
     }
   };
 
@@ -51,6 +109,27 @@ const FactPannel = ({ file }) => {
   return (
     <section className="fact-narration-panel">
       <h3>音声ナレーション</h3>
+
+      {file && (
+        <div style={{ marginBottom: "15px" }}>
+          <button
+            onClick={handleManualGenerate}
+            disabled={loading}
+            style={{
+              padding: "8px 16px",
+              backgroundColor: "#007bff",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: loading ? "not-allowed" : "pointer",
+              fontSize: "14px"
+            }}
+          >
+            {loading ? "生成中..." : "ナレーション生成"}
+          </button>
+        </div>
+      )}
+
       {loading && <p>生成中...</p>}
       {narrationText && (
         <div style={{ marginTop: 20 }}>
@@ -71,6 +150,6 @@ const FactPannel = ({ file }) => {
       )}
     </section>
   );
-};
+});
 
 export default FactPannel;

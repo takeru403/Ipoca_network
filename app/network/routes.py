@@ -3,6 +3,9 @@ from app.decorators import login_required
 from .draw_network import create_network_json
 import traceback
 import logging
+import tempfile
+import os
+import pandas as pd
 
 network_bp = Blueprint("network", __name__)
 
@@ -24,8 +27,25 @@ def network():
                 "message": "CSVまたはExcelファイルのみ対応しています"
             }), 400
 
+        # ファイルの内容を完全に読み込んでコピー
+        file_content = f.read()
+        f.seek(0)  # ファイルポインタをリセット
+
+        # ファイルを一時的に保存してから読み込み
+        temp_file = tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.csv')
+        temp_file.write(file_content)
+        temp_file.flush()  # バッファをフラッシュ
+        temp_file.close()  # ファイルを閉じる
+        temp_file_path = temp_file.name
+
         try:
-            data = create_network_json(f)
+            # ファイル読み込み
+            if f.filename and f.filename.endswith(".csv"):
+                df = pd.read_csv(temp_file_path)
+            else:
+                df = pd.read_excel(temp_file_path)
+
+            data = create_network_json(temp_file_path)
             return jsonify(data)
         except Exception as e:
             logging.error(f"Network creation error: {str(e)}")
@@ -35,6 +55,10 @@ def network():
                 "message": str(e),
                 "details": traceback.format_exc()
             }), 500
+        finally:
+            # 一時ファイルを削除
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
 
     except Exception as e:
         logging.error(f"Unexpected error: {str(e)}")
