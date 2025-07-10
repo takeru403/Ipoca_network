@@ -4,6 +4,30 @@
 
 ---
 
+## AWSインフラ構成図（Mermaid）
+
+```mermaid
+graph TD
+  VPC["VPC<br/>10.0.0.0/16"]
+  IGW["Internet Gateway"]
+  RT["Route Table"]
+  SUBNET["Public Subnet<br/>10.0.1.0/24"]
+  SG["Security Group<br/>HTTP/SSH/5000"]
+  EC2["EC2 Instance<br/>Flask App"]
+  EIP["Elastic IP"]
+
+  VPC --> IGW
+  VPC --> SUBNET
+  VPC --> SG
+  SUBNET --> RT
+  RT --> IGW
+  SUBNET --> EC2
+  EC2 --> SG
+  EC2 --> EIP
+```
+
+---
+
 ## ディレクトリ構成
 
 ```
