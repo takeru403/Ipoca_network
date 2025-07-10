@@ -8,7 +8,9 @@ import MindMap from "./components/MindMap";
 import PosData from "./components/PosData";
 import Cluster from "./components/Cluster";
 import FactPannel from "./components/FactPannel";
+import CreateNote from "./components/CreateNote";
 import { fetchJSON } from "./api";
+import SolutionVoiceModal from "./components/SolutionVoiceModal";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -19,6 +21,12 @@ function App() {
   const [showMindMap, setShowMindMap] = useState(false);
   const [uploadedPosFile, setUploadedPosFile] = useState(null);
   const [autoProcessId, setAutoProcessId] = useState(null);
+  const [showCreateNote, setShowCreateNote] = useState(false);
+  const [showSolutionVoice, setShowSolutionVoice] = useState(false);
+  const [latestIdea, setLatestIdea] = useState("");
+  const [ageColumn, setAgeColumn] = useState("");
+  const [minAge, setMinAge] = useState(0);
+  const [maxAge, setMaxAge] = useState(120);
 
   const logout = useCallback(async () => {
     try {
@@ -27,6 +35,11 @@ function App() {
     setIsLoggedIn(false);
     setToast("ログアウトしました");
   }, []);
+
+  // CreateNoteでAIアイディア内容をAppに渡す
+  const handleIdeaGenerated = (idea) => {
+    setLatestIdea(idea);
+  };
 
   // メインコンテンツをメモ化して不要な再レンダリングを防ぐ
   const mainContent = useMemo(() => {
@@ -57,7 +70,9 @@ function App() {
       return (
         <>
           {/* POSデータ前処理 */}
-          <PosData setUploadedPosFile={setUploadedPosFile} onAutoProcessComplete={setAutoProcessId} />
+          <PosData setUploadedPosFile={setUploadedPosFile} onAutoProcessComplete={setAutoProcessId}
+            ageColumn={ageColumn} setAgeColumn={setAgeColumn} minAge={minAge} setMinAge={setMinAge} maxAge={maxAge} setMaxAge={setMaxAge}
+          />
           {/* クラスタリング */}
           <Cluster autoProcessId={autoProcessId} />
           {/* ネットワーク描画 */}
@@ -69,7 +84,7 @@ function App() {
         </>
       );
     }
-  }, [showMindMap, autoProcessId]);
+  }, [showMindMap, autoProcessId, ageColumn, minAge, maxAge]);
 
   // ファクトパネルをメモ化
   const factPanel = useMemo(() => (
@@ -79,10 +94,10 @@ function App() {
         <p className="panel-description">「1.POSデータ前処理」にアップロードしたデータのファクトに関して、音声ナレーションを行います。</p>
       </div>
       <div className="panel-content">
-        <FactPannel file={uploadedPosFile} />
+        <FactPannel file={uploadedPosFile} ageColumn={ageColumn} minAge={minAge} maxAge={maxAge} />
       </div>
     </aside>
-  ), [uploadedPosFile]);
+  ), [uploadedPosFile, ageColumn, minAge, maxAge]);
 
   // Studioパネルをメモ化
   const studioPanel = useMemo(() => (
@@ -92,21 +107,25 @@ function App() {
         <p className="panel-description">販促事例のアイデア、分析をここに記載できます。</p>
       </div>
       <div className="panel-content">
+        <button className="panel-button" onClick={() => setShowCreateNote(true)}>
+          📖 AIソリューションアイディア出し
+        </button>
         <button
           className={`panel-button ${showMindMap ? 'active' : ''}`}
           onClick={() => setShowMindMap(true)}
         >
           ✅ マインドマップ
         </button>
-        <button className="panel-button">
-          🗂 音声スライド要約
-        </button>
-        <button className="panel-button">
-          📖 ノート記事作成
+        <button
+          className="panel-button"
+          onClick={() => setShowSolutionVoice(true)}
+          disabled={!latestIdea}
+        >
+          🗂 ソリューション音声解説
         </button>
       </div>
     </aside>
-  ), [showMindMap]);
+  ), [showMindMap, latestIdea]);
 
   if (!isLoggedIn) {
     return <LoginForm onLogin={() => setIsLoggedIn(true)} />;
@@ -158,6 +177,27 @@ function App() {
         {/* Studioパネル */}
         {showPanel && showStudioPanel && studioPanel}
       </div>
+      {showCreateNote && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+          background: 'rgba(0,0,0,0.3)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <CreateNote
+            onClose={() => setShowCreateNote(false)}
+            onShowMindMap={() => {
+              setShowCreateNote(false);
+              setShowMindMap(true);
+            }}
+            onIdeaGenerated={handleIdeaGenerated}
+          />
+        </div>
+      )}
+      {showSolutionVoice && (
+        <SolutionVoiceModal
+          ideaText={latestIdea}
+          onClose={() => setShowSolutionVoice(false)}
+        />
+      )}
     </div>
   );
 }

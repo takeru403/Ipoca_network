@@ -23,13 +23,13 @@ export default React.memo(function RadarChartBox({ setToast, logout, autoProcess
   const [loading, setLoading] = useState(false);
 
   const annotations = [
-    { label: "館内メディア", x: 200, y: 80 },
+    { label: "館内メディア", x: 190, y: 80 },
     { label: "売場連携", x: 150, y: 120 },
     { label: "レコメンド", x: 120, y: 200 },
-    { label: "付加価値", x: 180, y: 320 },
-    { label: "疑似体験コンテンツ", x: 300, y: 320 },
+    { label: "付加価値", x: 180, y: 340 },
+    { label: "疑似体験コンテンツ", x: 300, y: 340 },
     { label: "CRM", x: 380, y: 220 },
-    { label: "館外メディア", x: 300, y: 80 }
+    { label: "館外メディア", x: 310, y: 80 }
   ];
 
   const handleAnnotationClick = async (label) => {
@@ -153,6 +153,29 @@ export default React.memo(function RadarChartBox({ setToast, logout, autoProcess
     saveAs(statsBlob, "radar_chart_statistics.json");
   };
 
+  // 指標順を固定
+  const radarMetrics = [
+    "ユニーク客数",
+    "売上",
+    "平均頻度(日数/ユニーク客数)",
+    "1日あたり購買金額",
+    "日別合計媒介中心"
+  ];
+
+  // サーバーデータを指標順で並べ替え
+  const orderedRadarData = radarMetrics.map(metric =>
+    radarData.find(row => row.metric === metric) || { metric, ...Object.fromEntries(selectedTenants.map(t => [t, 0])) }
+  );
+
+  // ラベル日本語明示
+  const metricLabelMap = {
+    "ユニーク客数": "ユニーク客数",
+    "売上": "売上",
+    "平均頻度(日数/ユニーク客数)": "平均頻度(日数/ユニーク客数)",
+    "1日あたり購買金額": "1日あたり購買金額",
+    "日別合計媒介中心": "日別合計媒介中心"
+  };
+
   // autoProcessIdで自動描画
   useEffect(() => {
     if (!autoProcessId) return;
@@ -251,7 +274,7 @@ export default React.memo(function RadarChartBox({ setToast, logout, autoProcess
         </div>
       )}
 
-      {radarData.length > 0 && (
+      {orderedRadarData.length > 0 && (
         <div className="radar-chart-wrapper">
           <RadarChart
             cx={250}
@@ -260,10 +283,13 @@ export default React.memo(function RadarChartBox({ setToast, logout, autoProcess
             width={520}
             height={420}
             margin={{ top: 50, right: 50, left: 50, bottom: 50 }}
-            data={radarData}
+            data={orderedRadarData}
           >
             <PolarGrid />
-            <PolarAngleAxis dataKey="metric" />
+            <PolarAngleAxis
+              dataKey="metric"
+              tickFormatter={v => metricLabelMap[v] || v}
+            />
             <PolarRadiusAxis angle={30} domain={[0, 1]} />
             {selectedTenants.map((t, i) => (
               <Radar
@@ -279,35 +305,38 @@ export default React.memo(function RadarChartBox({ setToast, logout, autoProcess
             <Legend />
           </RadarChart>
           <svg width={520} height={420} style={{ position: "absolute", pointerEvents: "none" }}>
-            {annotations.map((a, idx) => (
-              <g
-                key={idx}
-                transform={`translate(${a.x},${a.y})`}
-                style={{ pointerEvents: "all", cursor: "pointer" }}
-                onClick={() => handleAnnotationClick(a.label)}
-              >
-                <rect
-                  x={-((a.label.length * 9 + 10) / 2)}
-                  y={-15}
-                  rx={10}
-                  ry={10}
-                  width={a.label.length * 9 + 10}
-                  height={30}
-                  fill="#fff8c6"
-                  stroke="#999"
-                  strokeWidth={0.8}
-                  opacity={0.65}
-                />
-                <text
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fontSize="11"
-                  fill="#000"
+            {annotations.map((a, idx) => {
+              const paddingX = 24;
+              const charWidth = 13;
+              const rectWidth = a.label.length * charWidth + paddingX;
+              return (
+                <g
+                  key={idx}
+                  className="radar-annotation"
+                  transform={`translate(${a.x},${a.y})`}
+                  style={{ pointerEvents: "all", cursor: "pointer" }}
+                  onClick={() => handleAnnotationClick(a.label)}
                 >
-                  {a.label}
-                </text>
-              </g>
-            ))}
+                  <rect
+                    className="radar-annotation-rect"
+                    x={-(rectWidth / 2)}
+                    y={-15}
+                    rx={10}
+                    ry={10}
+                    width={rectWidth}
+                    height={30}
+                  />
+                  <text
+                    className="radar-annotation-text"
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fontSize="12"
+                  >
+                    {a.label}
+                  </text>
+                </g>
+              );
+            })}
           </svg>
         </div>
       )}

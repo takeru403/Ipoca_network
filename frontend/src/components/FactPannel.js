@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { fetchJSON } from "../api";
 
-const FactPannel = React.memo(({ file }) => {
+const FactPannel = React.memo(({ file, ageColumn, minAge, maxAge }) => {
   const [narrationText, setNarrationText] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
   const [loading, setLoading] = useState(false);
@@ -65,6 +65,9 @@ const FactPannel = React.memo(({ file }) => {
 
     const formData = new FormData();
     formData.append("file", inputFile);
+    if (ageColumn) formData.append("age_column", ageColumn);
+    if (minAge !== undefined) formData.append("min_age", minAge);
+    if (maxAge !== undefined) formData.append("max_age", maxAge);
 
     try {
       const res = await fetch("/api/factpanel/narration", {

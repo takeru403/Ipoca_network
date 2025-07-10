@@ -14,6 +14,7 @@ import traceback
 import copy
 import numpy as np
 from collections import Counter
+import math
 
 # ログ設定
 logging.basicConfig(
@@ -33,6 +34,16 @@ processing_status = {}
 
 # 自動処理用のグローバル変数
 auto_processing_data = {}
+
+def nan_to_none(obj):
+    if isinstance(obj, float) and (math.isnan(obj) or obj is np.nan):
+        return None
+    elif isinstance(obj, dict):
+        return {k: nan_to_none(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [nan_to_none(x) for x in obj]
+    else:
+        return obj
 
 @posdata_bp.route("/api/posdata/upload", methods=["POST"])
 @login_required
@@ -80,15 +91,17 @@ def upload_posdata():
                 df = pd.read_csv(temp_file_path)
             else:
                 df = pd.read_excel(temp_file_path)
-            preview = df.head(20).to_dict(orient="records")
+            preview = df.head(20)
+            preview = preview.where(pd.notnull(preview), None)
+            preview = preview.to_dict(orient="records")
             columns = list(df.columns)
-            return jsonify({"preview": preview, "columns": columns})
+            return jsonify(nan_to_none({"preview": preview, "columns": columns}))
         finally:
             if os.path.exists(temp_file_path):
                 os.unlink(temp_file_path)
     except Exception as e:
         logger.error(f"アップロードエラー: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify(nan_to_none({"error": str(e)})), 500
 
 @posdata_bp.route("/api/posdata/process", methods=["POST"])
 @login_required
@@ -193,6 +206,18 @@ def process_posdata():
                     else:
                         df = pd.read_excel(temp_file.name)
 
+                    # --- カテゴリ列の抽出 ---
+                    category_col = None
+                    for col in ["カテゴリ", "category", "カテゴリー"]:
+                        if col in df.columns:
+                            category_col = col
+                            break
+                    if category_col:
+                        categories = df[category_col].dropna().unique().tolist()
+                    else:
+                        categories = []
+                    processing_status[process_id]["category"] = categories
+
                     # 列名の変更
                     seen = set()
                     unique_mapping = {}
@@ -292,27 +317,27 @@ def process_posdata():
         thread.daemon = True
         thread.start()
 
-        return jsonify({
+        return jsonify(nan_to_none({
             "message": "処理を開始しました",
             "process_id": process_id
-        })
+        }))
 
     except Exception as e:
         logging.error(f"POS data processing error: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify(nan_to_none({"error": str(e)})), 500
 
 @posdata_bp.route("/api/posdata/status/<process_id>", methods=["GET"])
 @login_required
 def get_processing_status(process_id):
     try:
         if process_id not in processing_status:
-            return jsonify({"error": "処理IDが見つかりません"}), 404
+            return jsonify(nan_to_none({"error": "処理IDが見つかりません"})), 404
 
-        return jsonify(processing_status[process_id])
+        return jsonify(nan_to_none(processing_status[process_id]))
 
     except Exception as e:
         logging.error(f"Status check error: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify(nan_to_none({"error": str(e)})), 500
 
 @posdata_bp.route("/api/posdata/download/<filename>", methods=["GET"])
 @login_required
@@ -428,6 +453,18 @@ def auto_process_posdata():
                         df_pos = pd.read_excel(temp_file_pos.name)
                     logger.info(f"POSファイル読み込み完了: {len(df_pos)} 行")
 
+                    # --- カテゴリ列の抽出 ---
+                    category_col = None
+                    for col in ["カテゴリ", "category", "カテゴリー"]:
+                        if col in df_pos.columns:
+                            category_col = col
+                            break
+                    if category_col:
+                        # カテゴリ列があればユニーク値リストを格納
+                        categories = df_pos[category_col].dropna().unique().tolist()
+                    else:
+                        categories = []
+
                     # デフォルト値でアソシエーション分析
                     rules = calc_asociation(df_pos, min_support=0.0001, max_len=2)
                     logger.info(f"アソシエーション分析完了: {len(rules)} ルール")
@@ -457,6 +494,7 @@ def auto_process_posdata():
                     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                     pos_filename = f"pos_processed_{timestamp}.csv"
                     pos_file_path = os.path.join(tempfile.gettempdir(), pos_filename)
+                    rules_df = rules_df.where(pd.notnull(rules_df), None)
                     rules_df.to_csv(pos_file_path, index=False, encoding='utf-8-sig')
                     logger.info(f"POS結果保存完了: {pos_file_path}")
 
@@ -487,6 +525,7 @@ def auto_process_posdata():
                     # クラスタリング結果を保存
                     cluster_filename = f"clustering_result_{timestamp}.csv"
                     cluster_file_path = os.path.join(tempfile.gettempdir(), cluster_filename)
+                    clustering_result['agg_df'] = clustering_result['agg_df'].where(pd.notnull(clustering_result['agg_df']), None)
                     clustering_result['agg_df'].to_csv(cluster_file_path, index=False, encoding='utf-8-sig')
                     logger.info(f"クラスタリング結果保存完了: {cluster_file_path}")
 
@@ -512,7 +551,109 @@ def auto_process_posdata():
                     logger.info("レーダーチャート準備開始")
 
                     # 4. レーダーチャートデータ準備
-                    radar_data = clustering_result['radar_chart_data']
+                    # --- ここから追加 ---
+                    # テナント名列の特定
+                    tenant_col = None
+                    for col in ['テナント名', 'ショップ名略称']:
+                        if col in df_pos.columns:
+                            tenant_col = col
+                            break
+                    if tenant_col is None:
+                        raise ValueError('テナント名またはショップ名略称列が見つかりません')
+
+                    # 日付列の特定
+                    date_col = None
+                    for col in ['利用日', '利用日時']:
+                        if col in df_pos.columns:
+                            date_col = col
+                            break
+                    if date_col is None:
+                        raise ValueError('利用日または利用日時列が見つかりません')
+
+                    # 会員番号列の特定
+                    member_col = None
+                    for col in ['会員番号', 'カード番号']:
+                        if col in df_pos.columns:
+                            member_col = col
+                            break
+                    if member_col is None:
+                        raise ValueError('会員番号またはカード番号列が見つかりません')
+
+                    # 日付列を日付型に変換
+                    df_pos[date_col] = pd.to_datetime(df_pos[date_col], errors='coerce')
+                    # ユニーク客数
+                    unique_customers = df_pos.groupby(tenant_col)[member_col].nunique().rename('ユニーク客数')
+                    # 売上
+                    sales = df_pos.groupby(tenant_col)['利用金額'].sum().rename('売上')
+                    # 訪問日数
+                    visit_days = df_pos.groupby(tenant_col)[date_col].nunique().rename('訪問日数')
+                    # 平均頻度（日数/ユニーク客数）
+                    avg_freq = (visit_days / unique_customers).rename('平均頻度(日数/ユニーク客数)')
+                    # 1日あたり購買金額
+                    sales_per_day = (sales / visit_days).rename('1日あたり購買金額')
+
+                    # --- 媒介中心性（betweenness centrality）計算 ---
+                    # ルールからネットワーク構築
+                    import networkx as nx
+                    G = nx.Graph()
+                    for _, row in rules_df.iterrows():
+                        src = str(row['antecedents'])
+                        dst = str(row['consequents'])
+                        lift_val = row['lift'] if 'lift' in row else 1.0
+                        if src and dst and src != dst:
+                            G.add_edge(src, dst, weight=lift_val)
+                    bet_cent = nx.betweenness_centrality(G, weight='weight', normalized=True)
+                    # テナントごとに媒介中心性を集計（ノード名がテナント名と一致する場合）
+                    bc_series = pd.Series(bet_cent, name='日別合計媒介中心')
+
+                    # --- 指標DataFrame統合 ---
+                    metrics_df = pd.concat([
+                        unique_customers, sales, avg_freq, sales_per_day
+                    ], axis=1)
+                    # bc_seriesのインデックスをstr型に揃える
+                    bc_series.index = bc_series.index.astype(str)
+                    metrics_df.index = metrics_df.index.astype(str)
+                    # join
+                    metrics_df = metrics_df.join(bc_series, how='left')
+                    # 欠損値は0で埋める
+                    if '日別合計媒介中心' in metrics_df.columns:
+                        metrics_df['日別合計媒介中心'] = metrics_df['日別合計媒介中心'].fillna(0)
+                    logger.info(f"metrics_df columns after join: {metrics_df.columns}")
+                    logger.info(f"metrics_df index after join: {metrics_df.index}")
+                    # インデックスをカラム化
+                    metrics_df = metrics_df.reset_index()
+                    metrics_df = metrics_df.rename(columns={metrics_df.columns[0]: 'テナント名'})
+                    logger.info(f"metrics_df columns: {metrics_df.columns}")
+                    if 'テナント名' not in metrics_df.columns:
+                        raise ValueError(f"metrics_dfにテナント名列が存在しません: {metrics_df.columns}")
+
+                    # --- 0-1正規化 ---
+                    metrics = [
+                        "ユニーク客数",
+                        "売上",
+                        "平均頻度(日数/ユニーク客数)",
+                        "1日あたり購買金額",
+                        "日別合計媒介中心"
+                    ]
+                    df_norm = metrics_df.copy()
+                    for m in metrics:
+                        min_v = df_norm[m].min()
+                        max_v = df_norm[m].max()
+                        if max_v > min_v:
+                            df_norm[m] = (df_norm[m] - min_v) / (max_v - min_v)
+                        else:
+                            df_norm[m] = 0.0
+                    # テナント名リスト
+                    tenants = list(df_norm["テナント名"].values)
+                    # レーダーチャートデータ生成
+                    radar_chart_data = []
+                    for metric in metrics:
+                        row = {"metric": metric}
+                        for t in tenants:
+                            v = df_norm.loc[df_norm["テナント名"] == t, metric].values
+                            row[t] = str(float(v[0])) if len(v) else "0.0"
+                        radar_chart_data.append(row)
+                    # --- ここまで追加 ---
                     logger.info("レーダーチャートデータ準備完了")
 
                     # 処理完了
@@ -530,11 +671,12 @@ def auto_process_posdata():
                         },
                         'clustering_data': {
                             'filename': cluster_filename,
-                            'cluster_names': clustering_result['cluster_names'],
-                            'radar_chart_data': radar_data
+                            'tenants': tenants,  # ショップ名略称のユニーク値リスト
+                            'radar_chart_data': radar_chart_data
                         },
                         'network_data': network_data,
-                        'processing_time': processing_time
+                        'processing_time': processing_time,
+                        'category': categories  # ここでカテゴリ情報を格納
                     }
 
                     processing_status[process_id].update({
@@ -571,14 +713,14 @@ def auto_process_posdata():
         thread.daemon = True
         thread.start()
 
-        return jsonify({
+        return jsonify(nan_to_none({
             "message": "自動処理を開始しました",
             "process_id": process_id
-        })
+        }))
 
     except Exception as e:
         logging.error(f"自動処理開始エラー: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify(nan_to_none({"error": str(e)})), 500
 
 @posdata_bp.route("/api/posdata/auto-status/<process_id>", methods=["GET"])
 @login_required
@@ -586,7 +728,7 @@ def get_auto_processing_status(process_id):
     """自動処理の状態を取得"""
     try:
         if process_id not in processing_status:
-            return jsonify({"error": "処理IDが見つかりません"}), 404
+            return jsonify(nan_to_none({"error": "処理IDが見つかりません"})), 404
 
         status = processing_status[process_id].copy()
 
@@ -594,11 +736,11 @@ def get_auto_processing_status(process_id):
         if status.get("status") == "completed" and process_id in auto_processing_data:
             status["result_data"] = auto_processing_data[process_id]
 
-        return jsonify(status)
+        return jsonify(nan_to_none(status))
 
     except Exception as e:
         logging.error(f"自動処理状態確認エラー: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify(nan_to_none({"error": str(e)})), 500
 
 @posdata_bp.route("/api/posdata/auto-download/<process_id>/<data_type>", methods=["GET"])
 @login_required
@@ -606,7 +748,7 @@ def download_auto_processed_data(process_id, data_type):
     """自動処理結果のダウンロード"""
     try:
         if process_id not in auto_processing_data:
-            return jsonify({"error": "処理結果が見つかりません"}), 404
+            return jsonify(nan_to_none({"error": "処理結果が見つかりません"})), 404
 
         data = auto_processing_data[process_id]
 
@@ -615,7 +757,7 @@ def download_auto_processed_data(process_id, data_type):
             filename = data['pos_data']['filename']
             file_path = os.path.join(tempfile.gettempdir(), filename)
             if not os.path.exists(file_path):
-                return jsonify({"error": "ファイルが見つかりません"}), 404
+                return jsonify(nan_to_none({"error": "ファイルが見つかりません"})), 404
             return send_file(
                 file_path,
                 as_attachment=True,
@@ -627,30 +769,30 @@ def download_auto_processed_data(process_id, data_type):
             clustering_data = data.get('clustering_data', {})
             # agg_dfがDataFrameならdictに変換
             if 'agg_df' in clustering_data and hasattr(clustering_data['agg_df'], 'to_dict'):
-                clustering_data['agg_df'] = clustering_data['agg_df'].to_dict(orient='records')
-            return jsonify(clustering_data)
+                clustering_data['agg_df'] = clustering_data['agg_df'].where(pd.notnull(clustering_data['agg_df']), None).to_dict(orient='records')
+            return jsonify(nan_to_none(clustering_data))
         elif data_type == "network":
             # ネットワークデータ（nodes, links）をJSONで返す
             network_data = data.get('network_data', {})
-            return jsonify(network_data)
+            return jsonify(nan_to_none(network_data))
         elif data_type == "radar":
             # レーダーチャートデータをJSONで返す
             clustering_data = data.get('clustering_data', {})
             radar_data = clustering_data.get('radar_chart_data', [])
             # テナント名リストや選択テナントも返す（必要に応じて）
-            tenants = list(clustering_data['cluster_names'].values()) if 'cluster_names' in clustering_data else []
+            tenants = list(clustering_data['tenants']) if 'tenants' in clustering_data else []
             selected_tenants = tenants[:5] if tenants else []
-            return jsonify({
+            return jsonify(nan_to_none({
                 'radar_data': radar_data,
                 'tenants': tenants,
                 'selected_tenants': selected_tenants
-            })
+            }))
         else:
-            return jsonify({"error": "無効なデータタイプです"}), 400
+            return jsonify(nan_to_none({"error": "無効なデータタイプです"})), 400
 
     except Exception as e:
         logging.error(f"自動処理結果ダウンロードエラー: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify(nan_to_none({"error": str(e)})), 500
 
 @posdata_bp.route("/api/posdata/llm-mapping", methods=["POST"], strict_slashes=False)
 @login_required
@@ -659,12 +801,12 @@ def llm_mapping_api():
         data = request.get_json()
         columns = data.get("columns", [])
         if not columns or not isinstance(columns, list):
-            return jsonify({"error": "columnsリストが必要です"}), 400
+            return jsonify(nan_to_none({"error": "columnsリストが必要です"})), 400
         mapping = llm_column_mapping(columns)
-        return jsonify({"mapping": mapping})
+        return jsonify(nan_to_none({"mapping": mapping}))
     except Exception as e:
         logger.error(f"LLMマッピングAPIエラー: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify(nan_to_none({"error": str(e)})), 500
 
 def create_network_json_from_rules(rules):
     """アソシエーションルールからネットワークデータを作成"""

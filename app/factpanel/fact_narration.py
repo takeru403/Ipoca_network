@@ -44,8 +44,26 @@ def generate_facts_summary(df: pd.DataFrame, num_cols: int = 3):
         facts.append(f"{col}: ユニーク={df[col].nunique()}種, 最頻値={mode}, 上位2={top2}")
     return '\n'.join(facts)
 
-def generate_narration_with_llm(df: pd.DataFrame) -> str:
+def generate_narration_with_llm(df: pd.DataFrame, age_column=None, min_age=None, max_age=None) -> str:
     num_columns, cat_columns = select_important_columns(df, 2)
+    # 年齢情報の記述を追加
+    age_info = ""
+    if age_column and age_column in df.columns:
+        age_series = pd.to_numeric(df[age_column], errors='coerce').dropna()
+        if not age_series.empty:
+            min_age_val = int(age_series.min()) if min_age is None else int(min_age)
+            max_age_val = int(age_series.max()) if max_age is None else int(max_age)
+            # ボリューム年齢層（最頻値）
+            mode_age = int(age_series.mode().iloc[0]) if not age_series.mode().empty else None
+            # 10歳刻みのボリューム層
+            bins = list(range(0, 101, 10))
+            age_hist = pd.cut(age_series, bins, right=False)
+            volume_bin = age_hist.value_counts().idxmax() if not age_hist.empty else None
+            if volume_bin is not None:
+                volume_str = f"{int(volume_bin.left)}代"
+            else:
+                volume_str = f"{mode_age}歳"
+            age_info = f"このデータの年齢範囲は{min_age_val}歳から{max_age_val}歳で、最も多い年齢層は{volume_str}です。"
     # 数値列describe（count, mean, std, min, maxのみ）
     describe_num = ""
     if num_columns:
@@ -64,6 +82,9 @@ def generate_narration_with_llm(df: pd.DataFrame) -> str:
 あなたはPOSデータのナレーターです。以下の統計情報とサンプルデータをもとに、POSデータから読み取れる客観的な事実のみを、淡々としたナレーション形式で一つのストーリーとして自然な日本語で述べてください。
 
 分析や推測、主観的な表現は避け、事実のみを時系列や全体の流れを意識して、聞き手が状況をイメージしやすいようにまとめてください。
+
+# 年齢情報
+{age_info}
 
 # 代表的な統計情報
 {facts_summary}

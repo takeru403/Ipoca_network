@@ -668,3 +668,32 @@ body {
     transform: rotate(360deg);
   }
 }
+
+/* ==================== レーダーチャートアノテーション ==================== */
+.radar-annotation-rect {
+  fill: rgba(255, 255, 255, 0.85);
+  stroke: #007bff;
+  stroke-width: 1.2;
+  opacity: 1;
+  filter: drop-shadow(0 2px 8px rgba(0, 123, 255, 0.10));
+  transition: fill 0.2s, opacity 0.2s, filter 0.2s;
+}
+
+.radar-annotation:hover .radar-annotation-rect {
+  fill: rgba(0, 123, 255, 0.10);
+  opacity: 1;
+  filter: drop-shadow(0 4px 16px rgba(0, 123, 255, 0.18));
+}
+
+.radar-annotation-text {
+  fill: #007bff;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  font-family: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+  transition: fill 0.2s;
+}
+
+.radar-annotation:hover .radar-annotation-text {
+  fill: #0056b3;
+}

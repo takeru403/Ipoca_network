@@ -115,7 +115,7 @@ function collapseAll(mindmap, idPrefix = "root", isRoot = true) {
 const MindMap = React.memo(() => {
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [expandedMap, setExpandedMap] = useState({ root: true });
+  const [expandedMap, setExpandedMap] = useState({ root: true }); // 初期値はrootのみ展開
   const [rawMindmap, setRawMindmap] = useState(null);
 
   // ノードの展開/折りたたみ切り替え

@@ -113,7 +113,7 @@ function StatusBox({ status, onDownload, onDownloadClustering, isAuto, handleAut
   );
 }
 
-export default React.memo(function PosData({ setUploadedPosFile, onProcessComplete, onAutoProcessComplete }) {
+export default React.memo(function PosData({ setUploadedPosFile, onProcessComplete, onAutoProcessComplete, ageColumn, setAgeColumn, minAge, setMinAge, maxAge, setMaxAge }) {
   const [file, setFile] = useState(null);
   const [columns, setColumns] = useState([]);
   const [columnMapping, setColumnMapping] = useState({});
@@ -129,12 +129,16 @@ export default React.memo(function PosData({ setUploadedPosFile, onProcessComple
   const [autoProcessingStatus, setAutoProcessingStatus] = useState(null);
   const [autoLoading, setAutoLoading] = useState(false);
 
+  // 年齢パラメータはpropsで管理
+
   // 必要な列の定義
   const requiredColumns = {
     "カード番号": "顧客のカード番号またはID",
     "利用日時": "購入日時",
     "利用金額": "購入金額",
-    "ショップ名略称": "店舗名またはショップ名"
+    "ショップ名略称": "店舗名またはショップ名",
+    "カテゴリ": "商品カテゴリや分類（任意）",
+    "年齢": "顧客の年齢（任意）"
   };
 
   // ファイルアップロード処理
@@ -447,6 +451,55 @@ export default React.memo(function PosData({ setUploadedPosFile, onProcessComple
         )}
       </div>
 
+      {/* 年齢マッピング・範囲指定セクション（アップロード直下に移動） */}
+      {columns.length > 0 && (
+        <div style={{ marginBottom: "20px", padding: "1rem", background: "#f8f9fa", borderRadius: "8px", border: "1px solid #bdbdbd" }}>
+          <h4 style={{ color: "#6c757d", marginBottom: "1rem" }}>🎂 年齢マッピング・抽出範囲</h4>
+          <div style={{ marginBottom: "10px" }}>
+            <label style={{ display: "block", marginBottom: "5px" }}>
+              年齢列:
+            </label>
+            <select
+              value={ageColumn}
+              onChange={e => setAgeColumn(e.target.value)}
+              style={{ width: "300px" }}
+            >
+              <option value="">選択してください（任意）</option>
+              {columns.map(col => (
+                <option key={col} value={col}>{col}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+            <label>
+              最小年齢:
+              <input
+                type="number"
+                min="0"
+                max={maxAge}
+                value={minAge}
+                onChange={e => setMinAge(Number(e.target.value))}
+                style={{ marginLeft: "10px", width: "80px" }}
+                disabled={!ageColumn}
+              />
+            </label>
+            <label>
+              最大年齢:
+              <input
+                type="number"
+                min={minAge}
+                max="120"
+                value={maxAge}
+                onChange={e => setMaxAge(Number(e.target.value))}
+                style={{ marginLeft: "10px", width: "80px" }}
+                disabled={!ageColumn}
+              />
+            </label>
+          </div>
+          <p style={{ color: "#888", marginTop: "0.5rem" }}>年齢列・範囲を指定すると、その範囲のデータのみ抽出して処理します（任意）</p>
+        </div>
+      )}
+
       {/* 自動処理ボタン */}
       {columns.length > 0 && (
         <div style={{ marginBottom: "20px", padding: "1.5rem", background: "linear-gradient(135deg, #e8f5e8, #d4edda)", borderRadius: "16px", border: "2px solid #28a745" }}>
@@ -503,44 +556,46 @@ export default React.memo(function PosData({ setUploadedPosFile, onProcessComple
             <h4 style={{ color: "#6c757d", marginBottom: "1rem" }}>🔗 列名マッピング</h4>
             <p className="instruction-text">POSデータの列名を適切な意味にマッピングしてください</p>
             {Object.entries(requiredColumns).map(([requiredCol, description]) => (
-              <div key={requiredCol} style={{ marginBottom: "10px" }}>
-                <label style={{ display: "block", marginBottom: "5px" }}>
-                  {requiredCol} ({description}):
-                </label>
-                <select
-                  value={Object.keys(columnMapping).find(key => columnMapping[key] === requiredCol) || ""}
-                  onChange={(e) => {
-                    const newMapping = { ...columnMapping };
-                    // 既存のマッピングを削除
-                    Object.keys(newMapping).forEach(key => {
-                      if (newMapping[key] === requiredCol) {
-                        delete newMapping[key];
+              requiredCol === "年齢" ? null : (
+                <div key={requiredCol} style={{ marginBottom: "10px" }}>
+                  <label style={{ display: "block", marginBottom: "5px" }}>
+                    {requiredCol} ({description}):
+                  </label>
+                  <select
+                    value={Object.keys(columnMapping).find(key => columnMapping[key] === requiredCol) || ""}
+                    onChange={(e) => {
+                      const newMapping = { ...columnMapping };
+                      // 既存のマッピングを削除
+                      Object.keys(newMapping).forEach(key => {
+                        if (newMapping[key] === requiredCol) {
+                          delete newMapping[key];
+                        }
+                      });
+                      // 新しいマッピングを追加
+                      if (e.target.value) {
+                        newMapping[e.target.value] = requiredCol;
                       }
-                    });
-                    // 新しいマッピングを追加
-                    if (e.target.value) {
-                      newMapping[e.target.value] = requiredCol;
-                    }
-                    setColumnMapping(newMapping);
-                  }}
-                  style={{ width: "300px" }}
-                >
-                  <option value="">選択してください</option>
-                  {columns
-                    // すでに他の日本語名に割り当てられているカラムは除外
-                    .filter(col => {
-                      const alreadyMapped = Object.entries(columnMapping).find(
-                        ([key, val]) => key === col && val !== requiredCol
-                      );
-                      return !alreadyMapped;
-                    })
-                    .map(col => (
-                      <option key={col} value={col}>
-                        {col}
-                      </option>
-                    ))}
-                </select>
-              </div>
+                      setColumnMapping(newMapping);
+                    }}
+                    style={{ width: "300px" }}
+                  >
+                    <option value="">選択してください</option>
+                    {columns
+                      // すでに他の日本語名に割り当てられているカラムは除外
+                      .filter(col => {
+                        const alreadyMapped = Object.entries(columnMapping).find(
+                          ([key, val]) => key === col && val !== requiredCol
+                        );
+                        return !alreadyMapped;
+                      })
+                      .map(col => (
+                        <option key={col} value={col}>
+                          {col}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )
             ))}
           </div>
         )}

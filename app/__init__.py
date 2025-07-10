@@ -30,6 +30,8 @@ def create_app():
     from .posdata.routes import posdata_bp
     from .clustering.routes import clustering_bp
     from .factpanel.routes import factpanel_bp
+    from .note.routes import note_bp
+    from .voice_narration.routes import voice_narration_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(network_bp)
     app.register_blueprint(search_bp)
@@ -38,6 +40,8 @@ def create_app():
     app.register_blueprint(posdata_bp)
     app.register_blueprint(clustering_bp)
     app.register_blueprint(factpanel_bp)
+    app.register_blueprint(note_bp)
+    app.register_blueprint(voice_narration_bp)
     register_frontend(app)
     db.init_app(app)
     Migrate(app, db)
