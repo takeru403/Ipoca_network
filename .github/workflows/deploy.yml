@@ -32,6 +32,13 @@ jobs:
         EOF
       shell: bash
 
+    - name: 📁 転送先ディレクトリ作成
+      run: |
+        ssh -i ~/.ssh/my-new-key.pem \
+            -o StrictHostKeyChecking=no \
+            ec2-user@13.113.99.55 "mkdir -p /home/ec2-user/Ipoca_network/"
+      shell: bash
+
     - name: 🚀 EC2 にファイル転送（フロントエンドsrcごと）
       run: |
         scp -i ~/.ssh/my-new-key.pem \
