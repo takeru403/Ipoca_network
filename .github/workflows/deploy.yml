@@ -24,7 +24,7 @@ jobs:
       run: |
         ssh -i ~/.ssh/my-new-key.pem \
             -o StrictHostKeyChecking=no \
-            ec2-user@54.168.159.57 << 'EOF'
+            ec2-user@13.113.99.55 << 'EOF'
           rm -rf ~/Ipoca_network/frontend
           rm -rf ~/Ipoca_network/app/static
           rm -f  ~/Ipoca_network/requirements.txt
@@ -36,20 +36,20 @@ jobs:
       run: |
         scp -i ~/.ssh/my-new-key.pem \
             -o StrictHostKeyChecking=no \
-            -r frontend ec2-user@54.168.159.57:/home/ec2-user/Ipoca_network/
+            -r frontend ec2-user@13.113.99.55:/home/ec2-user/Ipoca_network/
         scp -i ~/.ssh/my-new-key.pem \
             -o StrictHostKeyChecking=no \
-            -r app ec2-user@54.168.159.57:/home/ec2-user/Ipoca_network/
+            -r app ec2-user@13.113.99.55:/home/ec2-user/Ipoca_network/
         scp -i ~/.ssh/my-new-key.pem \
             -o StrictHostKeyChecking=no \
-            requirements.txt ec2-user@54.168.159.57:/home/ec2-user/Ipoca_network/
+            requirements.txt ec2-user@13.113.99.55:/home/ec2-user/Ipoca_network/
       shell: bash
 
     - name: 🛠️ EC2上で React ビルド & Flask 再起動
       run: |
         ssh -i ~/.ssh/my-new-key.pem \
             -o StrictHostKeyChecking=no \
-            ec2-user@54.168.159.57 << 'EOF'
+            ec2-user@13.113.99.55 << 'EOF'
           # Reactビルド
           cd ~/Ipoca_network/frontend
           npm install
