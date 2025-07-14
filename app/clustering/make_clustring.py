@@ -9,9 +9,15 @@ import io
 import base64
 import os
 from dotenv import load_dotenv, find_dotenv
-from langchain.chat_models import ChatOpenAI
-from langchain.prompts import PromptTemplate
-from langchain.schema import HumanMessage, SystemMessage
+try:
+    from langchain.chat_models import ChatOpenAI
+    from langchain.prompts import PromptTemplate
+    from langchain.schema import HumanMessage, SystemMessage
+except ImportError:
+    ChatOpenAI = None
+    PromptTemplate = None
+    HumanMessage = None
+    SystemMessage = None
 
 # --- データ型自動変換 ---
 def preprocess_df(df):
@@ -40,7 +46,7 @@ def flexible_preprocess(df):
     for col in df.columns:
         col_data = df[col]
         # 全欠損は除外
-        if col_data.isnull().all():
+        if bool(col_data.isnull().all()):
             continue
         # 数値型
         if pd.api.types.is_numeric_dtype(col_data):
@@ -114,14 +120,20 @@ def run_kmeans(agg_df, n_clusters=4):
         features.append("性別_男性")
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(agg_df[features])
-    kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init='auto')
-    agg_df["クラスタ"] = kmeans.fit_predict(X_scaled)
+    agg_df["クラスタ"] = KMeans(n_clusters=n_clusters, random_state=42, n_init='auto').fit_predict(X_scaled)
     return agg_df, features
 
 # --- LLMでクラスタ名付け ---
 def name_clusters(agg_df, features):
     load_dotenv(find_dotenv("../.env"))
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+    cluster_names = {}
+    # LLMが使えない場合やAPIキーがない場合はダミー名
+    if not (ChatOpenAI and PromptTemplate and HumanMessage and SystemMessage and OPENAI_API_KEY):
+        for cluster_id in sorted(pd.Series(agg_df["クラスタ"]).unique()):
+            cluster_names[str(cluster_id)] = f"クラスタ{cluster_id}"
+        agg_df["クラスタ名"] = agg_df["クラスタ"].map(lambda x: cluster_names[str(x)])
+        return agg_df, cluster_names
     llm = ChatOpenAI(model="gpt-4", temperature=0.7, openai_api_key=OPENAI_API_KEY)
     prompt_template = PromptTemplate(
         input_variables=["features"],
@@ -132,19 +144,25 @@ def name_clusters(agg_df, features):
 """
     )
     cluster_descriptions = []
-    for cluster_id in sorted(agg_df["クラスタ"].unique()):
+    for cluster_id in sorted(pd.Series(agg_df["クラスタ"]).unique()):
         sub = agg_df[agg_df["クラスタ"] == cluster_id][features]
-        desc = sub.mean().round(2).to_dict()
+        desc = sub.mean()
+        if isinstance(desc, pd.Series):
+            desc = desc.round(2).to_dict()
+        else:
+            desc = round(float(desc), 2)
         cluster_descriptions.append((cluster_id, desc))
-    cluster_names = {}
     for cluster_id, desc in cluster_descriptions:
         prompt = prompt_template.format(features=desc)
         messages = [
             SystemMessage(content="あなたはマーケティング部門の分析担当者です。"),
             HumanMessage(content=prompt)
         ]
-        response = llm(messages)
-        cluster_names[str(cluster_id)] = response.content.strip()
+        try:
+            response = llm(messages)
+            cluster_names[str(cluster_id)] = response.content.strip()
+        except Exception:
+            cluster_names[str(cluster_id)] = f"クラスタ{cluster_id}"
     agg_df["クラスタ名"] = agg_df["クラスタ"].map(lambda x: cluster_names[str(x)])
     return agg_df, cluster_names
 
@@ -152,21 +170,34 @@ def name_clusters(agg_df, features):
 def get_radar_chart_data(df, features, cluster_label_col="クラスタ名"):
     # クラスタごとに特徴量の平均値を計算（実数値のまま）
     cluster_summary = df.groupby(cluster_label_col)[features].mean()
+    # min-max正規化
+    norm_summary = cluster_summary.copy()
+    for metric in cluster_summary.columns:
+        min_v = cluster_summary[metric].min()
+        max_v = cluster_summary[metric].max()
+        if max_v > min_v:
+            norm_summary[metric] = (cluster_summary[metric] - min_v) / (max_v - min_v)
+        else:
+            norm_summary[metric] = 0.0
     # Recharts用データ形式に変換
     data = []
-    for metric in cluster_summary.columns:
+    for metric in norm_summary.columns:
         row = {"metric": metric}
-        for cluster in cluster_summary.index:
-            # 実数値を小数第2位まで四捨五入
-            row[cluster] = round(cluster_summary.loc[cluster, metric], 2)
+        for cluster in norm_summary.index:
+            # 0〜1の小数第3位まで
+            row[cluster] = round(norm_summary.loc[cluster, metric], 3)
         data.append(row)
     return data
 
 # --- メイン処理関数 ---
-def cluster_main(df, n_clusters=4):
+def cluster_main(df, n_clusters=4, selected_columns=None):
     try:
         import logging
         logging.info(f"クラスタリング開始: {len(df)} 行, {len(df.columns)} 列")
+
+        # ここで選択カラムだけに絞る
+        if selected_columns is not None:
+            df = df[selected_columns]
 
         df = flexible_preprocess(df)
         logging.info(f"前処理完了: {len(df)} 行, {len(df.columns)} 列")
@@ -179,40 +210,12 @@ def cluster_main(df, n_clusters=4):
         X_scaled = scaler.fit_transform(df[features])
         logging.info(f"スケーリング完了: {X_scaled.shape}")
 
-        kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init='auto')
-        df["クラスタ"] = kmeans.fit_predict(X_scaled)
+        df["クラスタ"] = KMeans(n_clusters=n_clusters, random_state=42, n_init='auto').fit_predict(X_scaled)
         logging.info("K-means完了")
 
         # LLMでクラスタ名付け
         logging.info("LLMクラスタ名付け開始")
-        load_dotenv(find_dotenv("../.env"))
-        OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-        llm = ChatOpenAI(model="gpt-4", temperature=0.7, openai_api_key=OPENAI_API_KEY)
-        prompt_template = PromptTemplate(
-            input_variables=["features"],
-            template="""
-以下の購買パターンの顧客クラスタに対して、マーケティング担当者がわかりやすく社内共有しやすい名前を1つつけてください。
-特徴: {features}
-例:「昼間によく来るシニア女性」「頻繁にまとめ買いする家族層」など
-"""
-        )
-        cluster_descriptions = []
-        for cluster_id in sorted(df["クラスタ"].unique()):
-            sub = df[df["クラスタ"] == cluster_id][features]
-            desc = sub.mean().round(2).to_dict()
-            cluster_descriptions.append((cluster_id, desc))
-
-        cluster_names = {}
-        for cluster_id, desc in cluster_descriptions:
-            prompt = prompt_template.format(features=desc)
-            messages = [
-                SystemMessage(content="あなたはマーケティング部門の分析担当者です。"),
-                HumanMessage(content=prompt)
-            ]
-            response = llm(messages)
-            cluster_names[str(cluster_id)] = response.content.strip()
-
-        df["クラスタ名"] = df["クラスタ"].map(lambda x: cluster_names[str(x)])
+        df, cluster_names = name_clusters(df, features)
         logging.info("LLMクラスタ名付け完了")
 
         # レーダーチャートデータ生成

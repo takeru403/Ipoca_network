@@ -162,7 +162,7 @@ def cluster_api():
             # agg_dfをlist of dictで返す
             agg_df = result["agg_df"]
             if hasattr(agg_df, 'to_dict'):
-                agg_df = safe_df_to_dict(agg_df)
+                agg_df = agg_df.to_dict(orient='records')
 
             # last_agg_dfにも同じ変換を適用
             global last_agg_df

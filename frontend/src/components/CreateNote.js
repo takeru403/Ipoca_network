@@ -1,14 +1,15 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
-const categories = ["飲料", "菓子", "日用品", "その他"];
+const defaultCategories = ["飲料", "菓子", "日用品", "その他"];
 const metrics = ["ユニーク客数", "売上", "平均頻度(日数/ユニーク客数)", "1日あたり購買金額", "日別合計媒介中心"];
 
-export default function CreateNote({ onClose, onShowMindMap, onIdeaGenerated }) {
+export default function CreateNote({ onClose, onShowMindMap, onIdeaGenerated, processId }) {
   const [tab, setTab] = useState("improve");
-  const [category, setCategory] = useState(categories[0]);
+  const [categories, setCategories] = useState(defaultCategories);
+  const [category, setCategory] = useState(defaultCategories[0]);
   const [metric, setMetric] = useState(metrics[0]);
-  const [categoryA, setCategoryA] = useState(categories[0]);
-  const [categoryB, setCategoryB] = useState(categories[1]);
+  const [categoryA, setCategoryA] = useState(defaultCategories[0]);
+  const [categoryB, setCategoryB] = useState(defaultCategories[1]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState("");
@@ -16,6 +17,33 @@ export default function CreateNote({ onClose, onShowMindMap, onIdeaGenerated }) 
   const [audioUrl, setAudioUrl] = useState("");
   const [audioLoading, setAudioLoading] = useState(false);
   const audioRef = useRef(null);
+
+  // カテゴリリストをAPIから取得
+  useEffect(() => {
+    if (!processId) return;
+    // /api/posdata/auto-status/<process_id> からカテゴリリストを取得
+    fetch(`/api/posdata/auto-status/${processId}`, { credentials: 'include' })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data && data.category && Array.isArray(data.category) && data.category.length > 0) {
+          setCategories(data.category);
+          setCategory(data.category[0]);
+          setCategoryA(data.category[0]);
+          setCategoryB(data.category[1] || data.category[0]);
+        } else {
+          setCategories(defaultCategories);
+          setCategory(defaultCategories[0]);
+          setCategoryA(defaultCategories[0]);
+          setCategoryB(defaultCategories[1]);
+        }
+      })
+      .catch(() => {
+        setCategories(defaultCategories);
+        setCategory(defaultCategories[0]);
+        setCategoryA(defaultCategories[0]);
+        setCategoryB(defaultCategories[1]);
+      });
+  }, [processId]);
 
   const improvePrompt = `「${category}」カテゴリの「${metric}」指標を改善するための販促企画を考えてください。`;
   const networkPrompt = `「${categoryA}」カテゴリと「${categoryB}」カテゴリを回遊させるための販促企画を考えてください。`;

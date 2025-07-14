@@ -9,19 +9,29 @@ function StatusBox({ status, onDownload, onDownloadClustering, isAuto, handleAut
   const isCompleted = status.status === 'completed';
   const isFailed = status.status === 'failed';
   const resultData = status.result_data || {};
+  // データ件数（レコード数）を取得
+  let recordCount = '';
+  if (resultData.pos_data && typeof resultData.pos_data.records === 'number') {
+    recordCount = resultData.pos_data.records;
+  } else if (status.records !== undefined) {
+    recordCount = status.records;
+  } else if (resultData.records !== undefined) {
+    recordCount = resultData.records;
+  }
   return (
-    <div style={{ marginBottom: "20px", padding: "1.5rem", background: isAuto ? "rgba(248, 249, 250, 0.9)" : "rgba(248, 249, 250, 0.8)", borderRadius: "16px", border: isAuto ? "2px solid #28a745" : "1px solid #6c757d" }}>
-      <h3 style={{ margin: "0 0 1rem 0", color: isAuto ? "#28a745" : "#6c757d", fontWeight: "600" }}>{isAuto ? "🔄 自動処理状況" : "📊 手動処理状況"}</h3>
+    <div style={{ marginBottom: "20px", padding: "1.5rem", background: "rgba(248, 249, 250, 0.8)", borderRadius: "16px", border: "1px solid #6c757d" }}>
+      <h3 style={{ margin: "0 0 1rem 0", color: "#6c757d", fontWeight: "600" }}>📊 処理状況</h3>
       <div style={{ marginBottom: "10px" }}>
         <p><strong>ステータス:</strong> {status.status}</p>
         <p><strong>現在の処理:</strong> {status.current_step || "-"}</p>
         <p><strong>メッセージ:</strong> {status.message}</p>
+        <p><strong>データ件数:</strong> {recordCount !== '' ? recordCount : '-'}</p>
         {status.progress !== undefined && (
           <div>
             <p><strong>進捗:</strong> {status.progress}%</p>
             <div style={{
               width: "100%",
-              backgroundColor: isAuto ? "#e9ecef" : "#f0f0f0",
+              backgroundColor: "#f0f0f0",
               borderRadius: "8px",
               overflow: "hidden",
               height: "24px"
@@ -29,7 +39,7 @@ function StatusBox({ status, onDownload, onDownloadClustering, isAuto, handleAut
               <div style={{
                 width: `${status.progress}%`,
                 height: "100%",
-                backgroundColor: isAuto ? "#28a745" : "#6c757d",
+                backgroundColor: "#6c757d",
                 transition: "width 0.5s ease",
                 borderRadius: "8px"
               }}></div>
@@ -42,8 +52,8 @@ function StatusBox({ status, onDownload, onDownloadClustering, isAuto, handleAut
       </div>
       {/* 完了時の結果表示とダウンロードボタン（自動・手動共通） */}
       {isCompleted && (resultData.pos_data || status.filename) && (
-        <div style={{ marginTop: "1rem", padding: "1rem", background: isAuto ? "rgba(40, 167, 69, 0.1)" : "rgba(40, 167, 69, 0.05)", borderRadius: "8px" }}>
-          <h4 style={{ color: isAuto ? "#28a745" : "#6c757d", marginBottom: "1rem" }}>✅ 処理完了</h4>
+        <div style={{ marginTop: "1rem", padding: "1rem", background: "rgba(40, 167, 69, 0.05)", borderRadius: "8px" }}>
+          <h4 style={{ color: "#6c757d", marginBottom: "1rem" }}>✅ 処理完了</h4>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
             <div>
               <h5>POSデータ前処理結果:</h5>
@@ -194,21 +204,35 @@ export default React.memo(function PosData({ setUploadedPosFile, onProcessComple
           const usedJpNames = new Set();
           const uniqueMapping = {};
           for (const [col, jp] of Object.entries(mapping)) {
+            // 年齢列の自動マッピング強化
             if (!usedJpNames.has(jp)) {
-              uniqueMapping[col] = jp;
-              usedJpNames.add(jp);
+              if (jp === '年齢' || jp === 'age' || jp === 'customer_age' || jp === '年代' || col.toLowerCase().includes('age') || col.includes('年齢') || col.includes('年代')) {
+                uniqueMapping[col] = '年齢';
+                usedJpNames.add('年齢');
+              } else {
+                uniqueMapping[col] = jp;
+                usedJpNames.add(jp);
+              }
             }
-            // 2つ目以降はスキップ
           }
           setColumnMapping(uniqueMapping);
         } else {
           // LLM失敗時は従来の部分一致マッピング
           const autoMapping = {};
           Object.keys(requiredColumns).forEach(requiredCol => {
-            const matchedCol = data.columns.find(col =>
-              col.toLowerCase().includes(requiredCol.toLowerCase()) ||
-              requiredCol.toLowerCase().includes(col.toLowerCase())
-            );
+            const matchedCol = data.columns.find(col => {
+              if (requiredCol === '年齢') {
+                return (
+                  col.toLowerCase().includes('age') ||
+                  col.includes('年齢') ||
+                  col.includes('年代')
+                );
+              }
+              return (
+                col.toLowerCase().includes(requiredCol.toLowerCase()) ||
+                requiredCol.toLowerCase().includes(col.toLowerCase())
+              );
+            });
             if (matchedCol) {
               autoMapping[matchedCol] = requiredCol;
             }
@@ -219,10 +243,19 @@ export default React.memo(function PosData({ setUploadedPosFile, onProcessComple
         // LLM APIエラー時も部分一致マッピング
         const autoMapping = {};
         Object.keys(requiredColumns).forEach(requiredCol => {
-          const matchedCol = data.columns.find(col =>
-            col.toLowerCase().includes(requiredCol.toLowerCase()) ||
-            requiredCol.toLowerCase().includes(col.toLowerCase())
-          );
+          const matchedCol = data.columns.find(col => {
+            if (requiredCol === '年齢') {
+              return (
+                col.toLowerCase().includes('age') ||
+                col.includes('年齢') ||
+                col.includes('年代')
+              );
+            }
+            return (
+              col.toLowerCase().includes(requiredCol.toLowerCase()) ||
+              requiredCol.toLowerCase().includes(col.toLowerCase())
+            );
+          });
           if (matchedCol) {
             autoMapping[matchedCol] = requiredCol;
           }
@@ -234,6 +267,29 @@ export default React.memo(function PosData({ setUploadedPosFile, onProcessComple
       setError(error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 年齢入力バリデーション
+  const [ageInputError, setAgeInputError] = useState("");
+
+  // 年齢入力欄のonChange
+  const handleMinAgeChange = (e) => {
+    const val = e.target.value;
+    if (val === "" || /^\d+$/.test(val)) {
+      setMinAge(val === "" ? "" : Number(val));
+      setAgeInputError("");
+    } else {
+      setAgeInputError("最小年齢は数値で入力してください");
+    }
+  };
+  const handleMaxAgeChange = (e) => {
+    const val = e.target.value;
+    if (val === "" || /^\d+$/.test(val)) {
+      setMaxAge(val === "" ? "" : Number(val));
+      setAgeInputError("");
+    } else {
+      setAgeInputError("最大年齢は数値で入力してください");
     }
   };
 
@@ -433,6 +489,13 @@ export default React.memo(function PosData({ setUploadedPosFile, onProcessComple
     <section className="section posdata-container">
       <h2 className="section-title">1. POSデータ前処理</h2>
 
+      {/* ファイルアップロード説明 */}
+      <p style={{ color: "#6c757d", marginBottom: "1rem" }}>
+        どんな列名のIDPOSデータでもご利用いただけます。<br />
+        下記の標準項目（カード番号・利用日時・利用金額・ショップ名略称・カテゴリ・年齢）に自動で対応付けます。<br />
+        自動判別が間違っている場合は、手動で修正してください。
+      </p>
+
       {/* ファイルアップロード */}
       <div className="upload-area">
         <h3 style={{ margin: "0 0 1rem 0", color: "#007bff", fontWeight: "600" }}>📁 POSデータのアップロード</h3>
@@ -457,7 +520,7 @@ export default React.memo(function PosData({ setUploadedPosFile, onProcessComple
           <h4 style={{ color: "#6c757d", marginBottom: "1rem" }}>🎂 年齢マッピング・抽出範囲</h4>
           <div style={{ marginBottom: "10px" }}>
             <label style={{ display: "block", marginBottom: "5px" }}>
-              年齢列:
+              年齢列（顧客年齢、任意）:
             </label>
             <select
               value={ageColumn}
@@ -478,9 +541,8 @@ export default React.memo(function PosData({ setUploadedPosFile, onProcessComple
                 min="0"
                 max={maxAge}
                 value={minAge}
-                onChange={e => setMinAge(Number(e.target.value))}
+                onChange={handleMinAgeChange}
                 style={{ marginLeft: "10px", width: "80px" }}
-                disabled={!ageColumn}
               />
             </label>
             <label>
@@ -490,61 +552,111 @@ export default React.memo(function PosData({ setUploadedPosFile, onProcessComple
                 min={minAge}
                 max="120"
                 value={maxAge}
-                onChange={e => setMaxAge(Number(e.target.value))}
+                onChange={handleMaxAgeChange}
                 style={{ marginLeft: "10px", width: "80px" }}
-                disabled={!ageColumn}
               />
             </label>
           </div>
+          {ageInputError && <p style={{ color: "red", marginTop: "0.5rem" }}>{ageInputError}</p>}
           <p style={{ color: "#888", marginTop: "0.5rem" }}>年齢列・範囲を指定すると、その範囲のデータのみ抽出して処理します（任意）</p>
+        </div>
+      )}
+
+      {/* マッピングUIの説明 */}
+      {columns.length > 0 && (
+        <div style={{ marginBottom: "20px" }}>
+          <h4 style={{ color: "#6c757d", marginBottom: "1rem" }}>🔗 列名マッピング</h4>
+          <p style={{ color: "#888", marginBottom: "1rem" }}>
+            アップロードしたファイルの列名と、下記の標準項目を対応付けてください。<br />
+            自動判別が間違っている場合は手動で修正できます。<br />
+            年齢やカテゴリは該当する列があれば選択してください（なくてもOKです）。
+          </p>
+          {Object.entries(requiredColumns).map(([requiredCol, description]) => (
+            <div key={requiredCol} style={{ marginBottom: "10px" }}>
+              <label style={{ display: "block", marginBottom: "5px" }}>
+                {(() => {
+                  switch (requiredCol) {
+                    case "カード番号":
+                      return "カード番号（顧客IDや会員番号など）:";
+                    case "利用日時":
+                      return "利用日時（購入日時・取引日時など）:";
+                    case "利用金額":
+                      return "利用金額（購入金額・金額など）:";
+                    case "ショップ名略称":
+                      return "ショップ名略称（店舗名・ショップ名など）:";
+                    case "カテゴリ":
+                      return "カテゴリ（商品カテゴリや分類など、任意）:";
+                    case "年齢":
+                      return "年齢（顧客年齢、任意）:";
+                    default:
+                      return `${requiredCol} (${description}):`;
+                  }
+                })()}
+              </label>
+              {requiredCol === "年齢" ? null : (
+                <select
+                  value={Object.keys(columnMapping).find(key => columnMapping[key] === requiredCol) || ""}
+                  onChange={(e) => {
+                    const newMapping = { ...columnMapping };
+                    Object.keys(newMapping).forEach(key => {
+                      if (newMapping[key] === requiredCol) {
+                        delete newMapping[key];
+                      }
+                    });
+                    if (e.target.value) {
+                      newMapping[e.target.value] = requiredCol;
+                    }
+                    setColumnMapping(newMapping);
+                  }}
+                  style={{ width: "300px" }}
+                >
+                  <option value="">選択してください</option>
+                  {columns
+                    .filter(col => {
+                      const alreadyMapped = Object.entries(columnMapping).find(
+                        ([key, val]) => key === col && val !== requiredCol
+                      );
+                      return !alreadyMapped;
+                    })
+                    .map(col => (
+                      <option key={col} value={col}>
+                        {col}
+                      </option>
+                    ))}
+                </select>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
       {/* 自動処理ボタン */}
       {columns.length > 0 && (
-        <div style={{ marginBottom: "20px", padding: "1.5rem", background: "linear-gradient(135deg, #e8f5e8, #d4edda)", borderRadius: "16px", border: "2px solid #28a745" }}>
-          <h3 style={{ margin: "0 0 1rem 0", color: "#28a745", fontWeight: "600" }}>🚀 自動処理（推奨）</h3>
-          <p style={{ marginBottom: "1rem", color: "#155724" }}>
+        <div style={{ marginBottom: "20px", padding: "1.5rem", background: "rgba(248, 249, 250, 0.8)", borderRadius: "16px", border: "1px solid #6c757d" }}>
+          <h3 style={{ margin: "0 0 1rem 0", color: "#6c757d", fontWeight: 600, fontSize: "1.5rem", letterSpacing: "0.02em" }}>🚀 自動処理（推奨）</h3>
+          <p style={{ marginBottom: "1rem", color: "#6c757d", fontSize: "1rem", lineHeight: 1.7, fontWeight: 400 }}>
             アップロードしたPOSデータから「カード番号」「利用日時」「利用金額」「テナント名」に対応する列をLLMが類推して クラスタリング → ネットワーク描画 → レーダーチャートを自動実行するための前処理を行います。
           </p>
           <button
             onClick={handleAutoProcess}
             disabled={autoLoading}
             style={{
-              padding: "12px 24px",
-              backgroundColor: "#28a745",
+              padding: "10px 20px",
+              backgroundColor: "#6c757d",
               color: "white",
               border: "none",
-              borderRadius: "8px",
+              borderRadius: "4px",
               cursor: autoLoading ? "not-allowed" : "pointer",
-              fontSize: "16px",
-              fontWeight: "600",
-              boxShadow: "0 4px 15px rgba(40, 167, 69, 0.3)"
+              fontSize: "1rem",
+              fontWeight: 600,
+              boxShadow: "0 4px 15px rgba(108, 117, 125, 0.15)",
+              marginTop: "10px"
             }}
           >
             {autoLoading ? "⏳ 自動処理中..." : "🚀 自動処理開始"}
           </button>
         </div>
       )}
-
-      {/* 自動・手動処理状況表示（同時に出ないように分岐） */}
-      {autoProcessingStatus ? (
-        <StatusBox
-          status={autoProcessingStatus}
-          onDownload={handleDownload}
-          onDownloadClustering={handleAutoDownload}
-          isAuto={true}
-          handleAutoDownload={handleAutoDownload}
-        />
-      ) : processingStatus ? (
-        <StatusBox
-          status={processingStatus}
-          onDownload={handleDownload}
-          onDownloadClustering={handleDownload}
-          isAuto={false}
-          handleAutoDownload={handleDownload}
-        />
-      ) : null}
 
       {/* 手動処理セクション */}
       <div style={{ marginTop: "2rem", padding: "1.5rem", background: "rgba(248, 249, 250, 0.8)", borderRadius: "16px", border: "1px solid #6c757d" }}>
@@ -654,6 +766,29 @@ export default React.memo(function PosData({ setUploadedPosFile, onProcessComple
           </div>
         )}
       </div>
+
+      {/* ↓↓↓ 状況表示はここ（手動処理セクションの下）に統一 ↓↓↓ */}
+      {(autoProcessingStatus || processingStatus) && (
+        <div style={{ marginTop: "2rem" }}>
+          {autoProcessingStatus ? (
+            <StatusBox
+              status={autoProcessingStatus}
+              onDownload={handleDownload}
+              onDownloadClustering={handleAutoDownload}
+              isAuto={true}
+              handleAutoDownload={handleAutoDownload}
+            />
+          ) : processingStatus ? (
+            <StatusBox
+              status={processingStatus}
+              onDownload={handleDownload}
+              onDownloadClustering={handleDownload}
+              isAuto={false}
+              handleAutoDownload={handleDownload}
+            />
+          ) : null}
+        </div>
+      )}
     </section>
   );
 });
