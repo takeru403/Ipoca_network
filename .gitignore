@@ -50,3 +50,7 @@ app/app.db
 *.mp3
 
 *.db
+
+#AWSのアクセスキー
+rootkey.csv
+*.csv
