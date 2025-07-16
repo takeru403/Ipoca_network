@@ -56,7 +56,7 @@ function mindmapToFlowElements(
 
 // カード風ノード（＋/−ボタン付き）
 function MindmapNode({ data }) {
-  const { label, hasChildren, nodeId, expanded, onToggle } = data;
+  const { label, hasChildren, expanded, onToggle } = data;
   return (
     <div style={{
       minWidth: 120,

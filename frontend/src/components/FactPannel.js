@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 
 const FactPannel = React.memo(({ file, ageColumn, minAge, maxAge }) => {
   const [narrationText, setNarrationText] = useState("");
@@ -41,14 +41,7 @@ const FactPannel = React.memo(({ file, ageColumn, minAge, maxAge }) => {
     }
   }, [file]);
 
-  // ファイルが変更された場合は必ず自動実行（processedFilesの有無に関係なく）
-  useEffect(() => {
-    if (file && fileHash) {
-      handleGenerate(file, fileHash, true); // force=trueで必ず生成
-    }
-  }, [file, ageColumn, minAge, maxAge, fileHash, handleGenerate]);
-
-  const handleGenerate = async (inputFile, hash = null, force = false) => {
+  const handleGenerate = useCallback(async (inputFile, hash = null, force = false) => {
     if (!inputFile) return;
 
     const currentHash = hash || await calculateFileHash(inputFile);
@@ -89,7 +82,14 @@ const FactPannel = React.memo(({ file, ageColumn, minAge, maxAge }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [ageColumn, maxAge, minAge, processedFiles]);
+
+  // ファイルが変更された場合は必ず自動実行（processedFilesの有無に関係なく）
+  useEffect(() => {
+    if (file && fileHash) {
+      handleGenerate(file, fileHash, true); // force=trueで必ず生成
+    }
+  }, [file, ageColumn, minAge, maxAge, fileHash, handleGenerate]);
 
   // 手動実行ボタンのハンドラー
   const handleManualGenerate = () => {
