@@ -31,3 +31,32 @@ cp frontend/build/index.html app/templates/
 # Flaskアプリ起動
 cd app
 gunicorn -b 0.0.0.0:80 app:app --daemon
+
+# CloudWatch Agentのインストール
+yum install -y amazon-cloudwatch-agent
+
+# CloudWatch Agent設定ファイルの作成
+cat <<EOF > /opt/aws/amazon-cloudwatch-agent/bin/config.json
+{
+  "metrics": {
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "metrics_collected": {
+      "Memory": {
+        "measurement": [
+          "UsedPercent"
+        ],
+        "metrics_collection_interval": 60
+      }
+    }
+  }
+}
+EOF
+
+# CloudWatch Agentの起動
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+  -a fetch-config \
+  -m ec2 \
+  -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json \
+  -s
