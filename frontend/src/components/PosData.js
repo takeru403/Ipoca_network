@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 
-import { fetchJSON } from "../api";
 import "../App.css";
 
 // 共通の処理状況表示コンポーネント

@@ -15,12 +15,12 @@ function mindmapToFlowElements(
 ) {
   const nodes = [];
   const edges = [];
-  const nodeId = `${idPrefix}`;
   const childCount = mindmap.children && Array.isArray(mindmap.children) ? mindmap.children.length : 0;
   let myY = yStart;
   if (childCount > 0) {
     myY = yStart + ((childCount * yStep) - yStep) / 2;
   }
+  const nodeId = `${idPrefix}`;
   nodes.push({
     id: nodeId,
     type: "mindmapNode",

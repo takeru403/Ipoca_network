@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from "react";
-import { fetchJSON } from "../api";
 
 const FactPannel = React.memo(({ file, ageColumn, minAge, maxAge }) => {
   const [narrationText, setNarrationText] = useState("");
@@ -47,7 +46,7 @@ const FactPannel = React.memo(({ file, ageColumn, minAge, maxAge }) => {
     if (file && fileHash) {
       handleGenerate(file, fileHash, true); // force=trueで必ず生成
     }
-  }, [fileHash]);
+  }, [file, ageColumn, minAge, maxAge, fileHash]);
 
   const handleGenerate = async (inputFile, hash = null, force = false) => {
     if (!inputFile) return;

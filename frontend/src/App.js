@@ -84,7 +84,7 @@ function App() {
         </>
       );
     }
-  }, [showMindMap, autoProcessId, ageColumn, minAge, maxAge]);
+  }, [showMindMap, autoProcessId, ageColumn, minAge, maxAge, logout]);
 
   // ファクトパネルをメモ化
   const factPanel = useMemo(() => (
@@ -104,7 +104,7 @@ function App() {
     <aside className="studio-panel">
       <div className="panel-header">
         <h2 className="panel-title">🧠 ソリューションパネル</h2>
-        <p className="panel-description">販促事例のアイデア、分析をここに記載できます。</p>
+        <p className="panel-description">販促事例のアイディア、分析をここに記載できます。</p>
       </div>
       <div className="panel-content">
         <button className="panel-button" onClick={() => setShowCreateNote(true)}>
