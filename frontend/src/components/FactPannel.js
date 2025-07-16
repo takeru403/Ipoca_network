@@ -46,7 +46,7 @@ const FactPannel = React.memo(({ file, ageColumn, minAge, maxAge }) => {
     if (file && fileHash) {
       handleGenerate(file, fileHash, true); // force=trueで必ず生成
     }
-  }, [file, ageColumn, minAge, maxAge, fileHash]);
+  }, [file, ageColumn, minAge, maxAge, fileHash, handleGenerate]);
 
   const handleGenerate = async (inputFile, hash = null, force = false) => {
     if (!inputFile) return;

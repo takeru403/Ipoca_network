@@ -20,11 +20,10 @@ function mindmapToFlowElements(
   if (childCount > 0) {
     myY = yStart + ((childCount * yStep) - yStep) / 2;
   }
-  const nodeId = `${idPrefix}`;
   nodes.push({
-    id: nodeId,
+    id: idPrefix,
     type: "mindmapNode",
-    data: { label: mindmap.title, hasChildren: childCount > 0, nodeId, expanded: expandedMap[nodeId] !== false },
+    data: { label: mindmap.title, hasChildren: childCount > 0, nodeId: idPrefix, expanded: expandedMap[idPrefix] !== false },
     position: { x: depth * 240, y: myY },
     style: {
       padding: 0,
@@ -33,16 +32,16 @@ function mindmapToFlowElements(
     }
   });
   if (parentId !== null) {
-    edges.push({ id: `${parentId}->${nodeId}`, source: parentId, target: nodeId, type: "smoothstep" });
+    edges.push({ id: `${parentId}->${idPrefix}`, source: parentId, target: idPrefix, type: "smoothstep" });
   }
-  if (childCount > 0 && expandedMap[nodeId] !== false) {
+  if (childCount > 0 && expandedMap[idPrefix] !== false) {
     mindmap.children.forEach((child, idx) => {
-      const childId = `${nodeId}-${idx}`;
+      const childId = `${idPrefix}-${idx}`;
       const childY = yStart + idx * yStep;
       const { nodes: childNodes, edges: childEdges } = mindmapToFlowElements(
         child,
         expandedMap,
-        nodeId,
+        idPrefix,
         childId,
         depth + 1,
         childY,
