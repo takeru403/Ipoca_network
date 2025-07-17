@@ -45,15 +45,14 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-northeast-1
 
-      - name: Zappa Package
+      - name: Zappa Package, Deploy or Update
         run: |
           source venv/bin/activate
           zappa package production
-          mv package.zip flask-api.zip
-
-      - name: Deploy or Update with Zappa
-        run: |
-          source venv/bin/activate
-          (zappa status production 2>&1 | grep -q 'not deployed' || zappa status production 2>&1 | grep -q 'No Lambda') && \
-            zappa deploy production || \
+          ZIPFILE=$(ls *.zip | grep asushiru-pos-production | head -n1)
+          mv "$ZIPFILE" flask-api.zip
+          if zappa status production 2>&1 | grep -q 'not deployed' || zappa status production 2>&1 | grep -q 'No Lambda'; then
+            zappa deploy production
+          else
             zappa update production
+          fi
