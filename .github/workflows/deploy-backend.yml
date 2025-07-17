@@ -45,6 +45,12 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-northeast-1
 
+      - name: Zappa Package
+        run: |
+          source venv/bin/activate
+          zappa package production
+          mv package.zip flask-api.zip
+
       - name: Deploy or Update with Zappa
         run: |
           source venv/bin/activate

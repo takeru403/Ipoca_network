@@ -12,6 +12,16 @@
     "role_name": "lambda_exec_role",
     "environment_variables": {
       "FLASK_ENV": "production"
-    }
+    },
+    "exclude": [
+      "frontend",
+      "node_modules",
+      "venv",
+      ".venv",
+      ".git",
+      ".github",
+      "tests",
+      "__pycache__"
+    ]
   }
 }
