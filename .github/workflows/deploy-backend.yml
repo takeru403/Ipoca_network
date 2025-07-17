@@ -48,8 +48,6 @@ jobs:
       - name: Deploy or Update with Zappa
         run: |
           source venv/bin/activate
-          if zappa status production | grep -q 'not deployed'; then
-            zappa deploy production
-          else
+          (zappa status production 2>&1 | grep -q 'not deployed' || zappa status production 2>&1 | grep -q 'No Lambda') && \
+            zappa deploy production || \
             zappa update production
-          fi
