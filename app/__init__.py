@@ -45,14 +45,28 @@ def create_app():
     app.register_blueprint(note_bp)
     app.register_blueprint(voice_narration_bp)
     register_frontend(app)
-    db.init_app(app)
-    Migrate(app, db)
-    # Lambda環境ではデータベース初期化をスキップ
+    # Lambda環境ではデータベース機能を無効化
     if not os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
+        db.init_app(app)
+        Migrate(app, db)
         with app.app_context():
             db.create_all()
 
     @app.route("/")
     def index():
-        return "OK"
+        try:
+            return "OK"
+        except Exception as e:
+            import traceback
+            error_msg = f"Error: {str(e)}\nTraceback: {traceback.format_exc()}"
+            print(error_msg)  # CloudWatch Logsに出力
+            return f"Error: {str(e)}", 500
+
+    @app.errorhandler(500)
+    def internal_error(error):
+        import traceback
+        error_msg = f"500 Error: {str(error)}\nTraceback: {traceback.format_exc()}"
+        print(error_msg)  # CloudWatch Logsに出力
+        return f"Internal Server Error: {str(error)}", 500
+    
     return app
