@@ -82,4 +82,12 @@ def create_app():
         import traceback
         error_msg = f"Error creating app: {str(e)}\nTraceback: {traceback.format_exc()}"
         print(error_msg)
-        raise
+        # エラーが発生してもFlaskアプリを返す
+        app = Flask(__name__)
+        app.config['SECRET_KEY'] = 'fallback-key'
+        
+        @app.route("/")
+        def error_index():
+            return f"Error: {str(e)}", 500
+        
+        return app
