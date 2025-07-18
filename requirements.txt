@@ -1,5 +1,2 @@
-Flask
-Flask-Cors
-Flask-Migrate
-Flask-SQLAlchemy
+Flask==2.3.3
 zappa
