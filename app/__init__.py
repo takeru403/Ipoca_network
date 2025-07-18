@@ -48,4 +48,8 @@ def create_app():
     Migrate(app, db)
     with app.app_context():
         db.create_all()
+
+    @app.route("/")
+    def index():
+        return "OK"
     return app

@@ -253,6 +253,23 @@ resource "aws_route53_record" "cloudfront" {
   }
 }
 
+resource "aws_route53_record" "acm_validation" {
+  for_each = {
+    for dvo in aws_acm_certificate.cert.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      type   = dvo.resource_record_type
+      record = dvo.resource_record_value
+    }
+  }
+
+  zone_id = aws_route53_zone.main.zone_id
+  name    = each.value.name
+  type    = each.value.type
+  ttl     = 60
+  records = [each.value.record]
+}
+
+
 # Lambda（Flask, OpenAI API呼び出し用）
 # Lambda本体はZappaやServerless Frameworkでデプロイする前提
 resource "aws_lambda_function" "flask_api" {
