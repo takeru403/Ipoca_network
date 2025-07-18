@@ -1,3 +1,4 @@
+import os
 from flask import Flask
 from flask_cors import CORS
 from .config import Config
@@ -46,8 +47,10 @@ def create_app():
     register_frontend(app)
     db.init_app(app)
     Migrate(app, db)
-    with app.app_context():
-        db.create_all()
+    # Lambda環境ではデータベース初期化をスキップ
+    if not os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
+        with app.app_context():
+            db.create_all()
 
     @app.route("/")
     def index():
