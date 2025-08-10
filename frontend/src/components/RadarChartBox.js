@@ -341,19 +341,19 @@ export default React.memo(function RadarChartBox({ setToast, logout, autoProcess
         </div>
       )}
 
-      <div className="custom-search">
-        <h3>🔍 スライドを自由検索</h3>
-        <input
+      {/* <div className="custom-search"> */}
+      {/* <h3>🔍 スライドを自由検索</h3> */}
+      {/* <input
           type="text"
           value={customQuery}
           onChange={(e) => setCustomQuery(e.target.value)}
           placeholder="検索ワードを入力"
           className="text-input"
-        />
-        <button onClick={handleCustomSearch} className="primary-button">
+        /> */}
+      {/* <button onClick={handleCustomSearch} className="primary-button">
           検索
         </button>
-      </div>
+      </div> */}
 
       {recommendResults.length > 0 && (
         <div className="recommend-box">

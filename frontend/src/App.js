@@ -80,7 +80,7 @@ function App() {
           {/* レーダーチャート */}
           <RadarChartBox setToast={setToast} logout={logout} autoProcessId={autoProcessId} />
           {/* スライド検索 */}
-          <SlideSearch setToast={setToast} logout={logout} />
+          {/* <SlideSearch setToast={setToast} logout={logout} /> */}
         </>
       );
     }

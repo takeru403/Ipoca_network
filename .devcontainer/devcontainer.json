@@ -8,7 +8,9 @@
     "vscode": {
       "extensions": [
         "ms-python.python",
-        "ms-toolsai.jupyter"
+        "ms-toolsai.jupyter",
+        "ms-vscode.vscode-typescript-next",
+        "ms-vscode.vscode-json"
       ],
       "settings": {
         "python.defaultInterpreterPath": "/usr/local/bin/python",

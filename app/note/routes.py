@@ -9,11 +9,19 @@ import os
 import pandas as pd
 import tempfile
 import logging
+from dotenv import load_dotenv,find_dotenv
+import logfire
+load_dotenv(find_dotenv("../.env"))
 
 logger = logging.getLogger(__name__)
 
 note_bp = Blueprint("obsidian", __name__, url_prefix="/obsidian")
 
+LOGFIRE_TOKEN = os.getenv("LOGFIRE_TOKEN")
+if LOGFIRE_TOKEN:
+    logfire.configure(token=LOGFIRE_TOKEN)
+else:
+    logger.warning("LOGFIRE_TOKENが設定されていません。s")
 # /generateエンドポイントは一旦省略
 
 @note_bp.route("/generate-idea", methods=["POST"])
@@ -120,6 +128,7 @@ def generate_idea():
     if not openai_api_key:
         return jsonify({"error": "OpenAI APIキーが設定されていません"}), 500
     try:
+        logfire.instrument_openai()
         client = openai.OpenAI(api_key=openai_api_key)
         response = client.chat.completions.create(
             model="gpt-4-turbo",
